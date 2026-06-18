@@ -1,0 +1,128 @@
+@model KedWear.Web.ViewModels.Cart.CartViewModel
+@{
+    ViewData["Title"] = "Sepetim";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container py-5">
+    <h1 class="section-title mb-5">Sepetim</h1>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-bag fs-1 text-muted d-block mb-3"></i>
+            <h5 class="text-muted fw-normal">Sepetiniz boş.</h5>
+            <a asp-controller="Product" asp-action="Index" class="btn-kw-dark mt-4">Alışverişe Başla</a>
+        </div>
+    }
+    else
+    {
+        <!-- Free shipping progress -->
+        @if (Model.RemainingForFreeShipping > 0)
+        {
+            <div class="alert alert-light border mb-4" style="font-size:.85rem">
+                <i class="bi bi-truck me-1"></i>
+                Ücretsiz kargo için <strong>@Model.RemainingForFreeShipping.ToString("N2") ₺</strong> daha alışveriş yapın.
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-success border-0 mb-4" style="font-size:.85rem">
+                <i class="bi bi-check-circle me-1"></i> Ücretsiz kargo kazandınız!
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- Cart Items -->
+            <div class="col-lg-8">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="d-flex gap-3 mb-4 pb-4 border-bottom" id="cart-item-@item.Id">
+                        <img src="@(item.Product?.MainImageUrl ?? "/images/products/placeholder.jpg")"
+                             alt="@item.Product?.Name"
+                             class="cart-item-image"
+                             onerror="this.src='/images/products/placeholder.jpg'" />
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <a asp-controller="Product" asp-action="Detail"
+                                           asp-route-slug="@item.Product?.Slug">@item.Product?.Name</a>
+                                    </h6>
+                                    @if (item.ProductVariant != null)
+                                    {
+                                        <small class="text-muted">
+                                            @if (!string.IsNullOrEmpty(item.ProductVariant.Size)) { <span>Beden: @item.ProductVariant.Size</span> }
+                                            @if (!string.IsNullOrEmpty(item.ProductVariant.Color)) { <span class="ms-2">Renk: @item.ProductVariant.Color</span> }
+                                        </small>
+                                    }
+                                </div>
+                                <button class="btn btn-link text-muted p-0" onclick="removeCartItem(@item.Id)">
+                                    <i class="bi bi-x-lg" style="font-size:.9rem"></i>
+                                </button>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="qty-control">
+                                    <button class="qty-btn" data-item-id="@item.Id" data-direction="down">−</button>
+                                    <span class="qty-value" data-item-id="@item.Id">@item.Quantity</span>
+                                    <button class="qty-btn" data-item-id="@item.Id" data-direction="up">+</button>
+                                </div>
+                                <div class="fw-600">@item.TotalPrice.ToString("N2") ₺</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <div class="order-summary-box">
+                    <h5 class="mb-4" style="font-family:var(--font-serif)">Sipariş Özeti</h5>
+                    <div class="d-flex justify-content-between mb-2" style="font-size:.9rem">
+                        <span>Ara Toplam</span>
+                        <span id="cartSubtotal">@Model.SubTotal.ToString("N2") ₺</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3" style="font-size:.9rem">
+                        <span>Kargo</span>
+                        <span id="cartShipping">
+                            @(Model.ShippingCost == 0 ? "Ücretsiz" : Model.ShippingCost.ToString("N2") + " ₺")
+                        </span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="fw-600">Toplam</span>
+                        <span class="fw-600" id="cartTotal">@Model.Total.ToString("N2") ₺</span>
+                    </div>
+                    <a asp-controller="Order" asp-action="Checkout" class="btn-kw-dark d-block text-center w-100">
+                        Ödemeye Geç
+                    </a>
+                    <a asp-controller="Product" asp-action="Index" class="d-block text-center mt-3 text-muted" style="font-size:.82rem">
+                        Alışverişe Devam Et
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        async function removeCartItem(id) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            try {
+                const res = await fetch(`/sepet/sil/${id}`, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token || '' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById(`cart-item-${id}`)?.remove();
+                    updateCartBadge();
+                    if (data.cartCount === 0) location.reload();
+                }
+            } catch(e) {}
+        }
+    </script>
+}

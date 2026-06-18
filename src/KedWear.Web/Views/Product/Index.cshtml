@@ -1,0 +1,137 @@
+@model KedWear.Web.ViewModels.Product.ProductListViewModel
+@{
+    ViewData["Title"] = Model.CategoryName ?? "Ürünler";
+}
+
+<div class="container py-5">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="section-title mb-1">@(Model.CategoryName ?? "Tüm Ürünler")</h1>
+            <p class="text-muted mb-0" style="font-size:.85rem">@Model.TotalCount ürün bulundu</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-md-3">
+            <form method="get" asp-controller="Product" asp-action="Index">
+                <!-- Search -->
+                <div class="mb-4">
+                    <label class="section-tag">Ara</label>
+                    <input type="text" name="ara" value="@Model.SearchTerm" class="form-control form-control-kw" placeholder="Ürün ara...">
+                </div>
+
+                <!-- Categories -->
+                <div class="mb-4">
+                    <label class="section-tag">Kategori</label>
+                    <div class="d-flex flex-column gap-2 mt-2">
+                        <a asp-controller="Product" asp-action="Index"
+                           class="d-flex justify-content-between @(Model.SelectedCategoryId == null ? "fw-600" : "")"
+                           style="font-size:.85rem">
+                            Tümü
+                        </a>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <a asp-controller="Product" asp-action="Index" asp-route-kategori="@cat.Id"
+                               class="d-flex justify-content-between @(Model.SelectedCategoryId == cat.Id ? "fw-600" : "")"
+                               style="font-size:.85rem">
+                                @cat.Name
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                <!-- Sort -->
+                <div class="mb-4">
+                    <label class="section-tag">Sırala</label>
+                    <select name="sirala" class="form-select form-control-kw mt-2" onchange="this.form.submit()">
+                        <option value="">Varsayılan</option>
+                        <option value="newest" selected="@(Model.SortBy == "newest")">En Yeni</option>
+                        <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Fiyat (Düşük-Yüksek)</option>
+                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Fiyat (Yüksek-Düşük)</option>
+                    </select>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.SelectedCategoryId.HasValue)
+                {
+                    <a asp-controller="Product" asp-action="Index" class="text-muted" style="font-size:.8rem">Filtreleri Temizle ×</a>
+                }
+            </form>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="col-md-9">
+            @if (!Model.Products.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted d-block mb-3"></i>
+                    <p class="text-muted">Aradığınız kriterlere uygun ürün bulunamadı.</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn-kw-outline mt-2">Tüm Ürünlere Git</a>
+                </div>
+            }
+            else
+            {
+                <div class="row row-cols-2 row-cols-lg-3 g-3 g-lg-4">
+                    @foreach (var product in Model.Products)
+                    {
+                        <div class="col">
+                            <a asp-controller="Product" asp-action="Detail" asp-route-slug="@product.Slug" class="d-block">
+                                <div class="product-card">
+                                    <div class="product-card-image">
+                                        @if (!string.IsNullOrEmpty(product.MainImageUrl))
+                                        {
+                                            <img src="@product.MainImageUrl" alt="@product.Name" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-items-center justify-content-center h-100">
+                                                <i class="bi bi-image" style="font-size:2.5rem;color:#ccc"></i>
+                                            </div>
+                                        }
+                                        @if (product.IsOnSale)
+                                        {
+                                            <span class="product-badge product-badge-sale">İndirim</span>
+                                        }
+                                    </div>
+                                    <div class="product-card-body">
+                                        <div class="product-category">@product.Category?.Name</div>
+                                        <div class="product-name" title="@product.Name">@product.Name</div>
+                                        <div class="mt-1">
+                                            @if (product.IsOnSale)
+                                            {
+                                                <span class="product-price-original">@product.Price.ToString("N2") ₺</span>
+                                                <span class="product-price product-price-sale">@product.CurrentPrice.ToString("N2") ₺</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="product-price">@product.Price.ToString("N2") ₺</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="mt-5 d-flex justify-content-center">
+                        <ul class="pagination">
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" asp-controller="Product" asp-action="Index"
+                                       asp-route-page="@i"
+                                       asp-route-kategori="@Model.SelectedCategoryId"
+                                       asp-route-ara="@Model.SearchTerm"
+                                       asp-route-sirala="@Model.SortBy">@i</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+        </div>
+    </div>
+</div>

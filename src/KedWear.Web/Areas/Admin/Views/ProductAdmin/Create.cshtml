@@ -1,0 +1,152 @@
+@model KedWear.Web.ViewModels.Admin.AdminProductViewModel
+@{
+    ViewData["Title"] = "Yeni Ürün Ekle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<form asp-controller="ProductAdmin" asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Ürün Bilgileri</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger" style="font-size:.78rem"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="ShortDescription" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <textarea asp-for="ShortDescription" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <textarea asp-for="Description" class="form-control" rows="6"></textarea>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Material" class="form-label fw-500" style="font-size:.85rem"></label>
+                            <input asp-for="Material" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CareInstructions" class="form-label fw-500" style="font-size:.85rem"></label>
+                            <input asp-for="CareInstructions" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Variants -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-600">Varyantlar (Beden / Renk / Stok)</h6>
+                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="addVariant()">
+                        <i class="bi bi-plus"></i> Ekle
+                    </button>
+                </div>
+                <div class="card-body" id="variantsContainer">
+                    <div class="row g-2 mb-2 text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+                        <div class="col-2">Beden</div>
+                        <div class="col-3">Renk</div>
+                        <div class="col-2">Renk Kodu</div>
+                        <div class="col-2">Stok</div>
+                        <div class="col-2">Fiyat Farkı</div>
+                        <div class="col-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Ürün Görselleri</h6>
+                </div>
+                <div class="card-body">
+                    <input type="file" name="images" class="form-control" multiple accept="image/*" />
+                    <small class="text-muted">İlk yüklenen görsel ana görsel olarak ayarlanır. Maks 5MB / görsel.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Fiyatlandırma</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Price" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <div class="input-group">
+                            <input asp-for="Price" class="form-control" type="number" step="0.01" min="0" />
+                            <span class="input-group-text">₺</span>
+                        </div>
+                        <span asp-validation-for="Price" class="text-danger" style="font-size:.78rem"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DiscountPrice" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <div class="input-group">
+                            <input asp-for="DiscountPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span class="input-group-text">₺</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Kategori & Durum</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="CategoryId" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <select asp-for="CategoryId" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))" class="form-select">
+                            <option value="">Kategori Seçin</option>
+                        </select>
+                        <span asp-validation-for="CategoryId" class="text-danger" style="font-size:.78rem"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Status" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <select asp-for="Status" class="form-select"
+                                asp-items="Html.GetEnumSelectList<KedWear.Core.Enums.ProductStatus>()"></select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input asp-for="IsFeatured" class="form-check-input" type="checkbox" />
+                        <label asp-for="IsFeatured" class="form-check-label" style="font-size:.85rem"></label>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DisplayOrder" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <input asp-for="DisplayOrder" class="form-control" type="number" min="0" />
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-dark w-100">Ürünü Kaydet</button>
+            <a href="/admin/urunler" class="btn btn-outline-secondary w-100 mt-2">İptal</a>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        let variantCount = 0;
+        function addVariant() {
+            const idx = variantCount++;
+            const container = document.getElementById('variantsContainer');
+            const div = document.createElement('div');
+            div.className = 'row g-2 mb-2 variant-row';
+            div.innerHTML = `
+                <div class="col-2"><input name="Variants[${idx}].Size" class="form-control form-control-sm" placeholder="S,M,L..." /></div>
+                <div class="col-3"><input name="Variants[${idx}].Color" class="form-control form-control-sm" placeholder="Siyah..." /></div>
+                <div class="col-2"><input name="Variants[${idx}].ColorCode" class="form-control form-control-sm" placeholder="#000000" /></div>
+                <div class="col-2"><input name="Variants[${idx}].StockQuantity" class="form-control form-control-sm" type="number" value="0" min="0" /></div>
+                <div class="col-2"><input name="Variants[${idx}].PriceDifference" class="form-control form-control-sm" type="number" step="0.01" placeholder="0.00" /></div>
+                <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.variant-row').remove()"><i class="bi bi-x"></i></button></div>
+            `;
+            container.appendChild(div);
+        }
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

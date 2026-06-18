@@ -1,0 +1,83 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var recentProducts = ViewBag.RecentProducts as IEnumerable<KedWear.Core.Entities.Product> ?? Enumerable.Empty<KedWear.Core.Entities.Product>();
+    var recentOrders = ViewBag.RecentOrders as IEnumerable<KedWear.Core.Entities.Order> ?? Enumerable.Empty<KedWear.Core.Entities.Order>();
+}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-3">
+            <div class="text-muted mb-1" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em">Toplam Ürün</div>
+            <div class="h3 fw-600 mb-0">@ViewBag.ProductCount</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-3">
+            <div class="text-muted mb-1" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em">Toplam Sipariş</div>
+            <div class="h3 fw-600 mb-0">@ViewBag.OrderCount</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Orders -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 fw-600">Son Siparişler</h6>
+                <a href="/admin/siparisler" style="font-size:.8rem">Tümü →</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0" style="font-size:.85rem">
+                    <thead>
+                        <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em">
+                            <th class="ps-3 py-2">Sipariş No</th>
+                            <th class="py-2">Tarih</th>
+                            <th class="py-2">Tutar</th>
+                            <th class="py-2">Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in recentOrders)
+                        {
+                            <tr>
+                                <td class="ps-3 py-2">
+                                    <a href="/admin/siparisler/detay/@order.Id">@order.OrderNumber</a>
+                                </td>
+                                <td class="py-2 text-muted">@order.CreatedAt.ToString("dd.MM.yy")</td>
+                                <td class="py-2">@order.TotalAmount.ToString("N2") ₺</td>
+                                <td class="py-2">
+                                    <span class="status-badge status-@order.Status.ToString().ToLower()">@order.Status</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-600">Hızlı İşlemler</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/urunler/ekle" class="btn btn-dark">
+                        <i class="bi bi-plus-lg me-2"></i>Yeni Ürün Ekle
+                    </a>
+                    <a href="/admin/kategoriler/ekle" class="btn btn-outline-dark">
+                        <i class="bi bi-plus-lg me-2"></i>Yeni Kategori
+                    </a>
+                    <a href="/admin/siparisler" class="btn btn-outline-secondary">
+                        <i class="bi bi-receipt me-2"></i>Siparişleri Gör
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

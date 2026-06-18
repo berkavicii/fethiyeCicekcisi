@@ -1,0 +1,148 @@
+@{
+    ViewData["Title"] = "KedWear – Butik Moda";
+    Layout = "_Layout";
+}
+
+<section class="hero-section">
+    <!-- Background image -->
+    <div class="hero-bg" style="background-image:url('https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg')"></div>
+    <div class="hero-overlay"></div>
+    <div class="container position-relative" style="z-index:2">
+        <div class="row">
+            <div class="col-lg-6 col-xl-5">
+                <span class="hero-tag">Yeni Koleksiyon 2025</span>
+                <h1 class="mb-4">Her parça<br>bir hikaye<br>anlatır.</h1>
+                <p class="hero-sub mb-5">Minimal, şık ve özgün tasarımlar. Kıyafet, çanta ve aksesuarlarla özgün stilinizi yaratın.</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a asp-controller="Product" asp-action="Index" class="btn-kw-dark">Alışverişe Başla</a>
+                    <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="btn-kw-outline-light">Çantalar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-white">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <p class="section-tag">Kategoriler</p>
+            <h2 class="section-title">Koleksiyonumuzu Keşfet</h2>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="tisort" class="d-block">
+                    <div class="category-card">
+                        <img src="https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg"
+                             alt="T-Shirt" loading="lazy" />
+                        <div class="category-card-label">
+                            <h3>T-Shirt</h3><small>Koleksiyonu Gör →</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="d-block">
+                    <div class="category-card">
+                        <img src="https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg"
+                             alt="Çanta" loading="lazy" />
+                        <div class="category-card-label">
+                            <h3>Çanta</h3><small>Koleksiyonu Gör →</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="takim" class="d-block">
+                    <div class="category-card">
+                        <img src="https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg"
+                             alt="Takım" loading="lazy" />
+                        <div class="category-card-label">
+                            <h3>Takım</h3><small>Koleksiyonu Gör →</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-light-kw">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <p class="section-tag">Seçili Ürünler</p>
+                <h2 class="section-title mb-0">Öne Çıkanlar</h2>
+            </div>
+            <a asp-controller="Product" asp-action="Index" class="d-none d-md-block" style="font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;">Tümünü Gör →</a>
+        </div>
+        @{
+            var fp = ViewBag.FeaturedProducts as IEnumerable<KedWear.Core.Entities.Product> ?? Enumerable.Empty<KedWear.Core.Entities.Product>();
+        }
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-lg-4">
+            @foreach (var product in fp)
+            {
+                <div class="col">
+                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@product.Slug" class="d-block">
+                        <div class="product-card">
+                            <div class="product-card-image">
+                                @if (!string.IsNullOrEmpty(product.MainImageUrl))
+                                {
+                                    <img src="@product.MainImageUrl" alt="@product.Name" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <div style="width:100%;height:100%;background:var(--kw-light);display:flex;align-items:center;justify-content:center">
+                                        <i class="bi bi-image" style="font-size:2rem;color:#ccc"></i>
+                                    </div>
+                                }
+                                <div class="product-card-overlay">
+                                    <span class="btn-kw-dark" style="font-size:.72rem;padding:.6rem 1.4rem">Ürünü İncele</span>
+                                </div>
+                                @if (product.IsOnSale) { <span class="product-badge product-badge-sale">İndirim</span> }
+                            </div>
+                            <div class="product-card-body">
+                                <div class="product-category">@product.Category?.Name</div>
+                                <div class="product-name" title="@product.Name">@product.Name</div>
+                                <div class="mt-1">
+                                    @if (product.IsOnSale)
+                                    {
+                                        <span class="product-price-original">@product.Price.ToString("N2") ₺</span>
+                                        <span class="product-price product-price-sale">@product.CurrentPrice.ToString("N2") ₺</span>
+                                    }
+                                    else { <span class="product-price">@product.Price.ToString("N2") ₺</span> }
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="py-4 border-top border-bottom">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <i class="bi bi-truck fs-4 mb-2 d-block"></i>
+                <div style="font-size:.82rem;font-weight:500">Hızlı Kargo</div>
+                <div class="text-muted" style="font-size:.75rem">1-3 İş Günü</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <i class="bi bi-shield-check fs-4 mb-2 d-block"></i>
+                <div style="font-size:.82rem;font-weight:500">Güvenli Ödeme</div>
+                <div class="text-muted" style="font-size:.75rem">PayTR ile %100 Güvenli</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <i class="bi bi-arrow-return-left fs-4 mb-2 d-block"></i>
+                <div style="font-size:.82rem;font-weight:500">Kolay İade</div>
+                <div class="text-muted" style="font-size:.75rem">14 Gün İade Hakkı</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <i class="bi bi-headset fs-4 mb-2 d-block"></i>
+                <div style="font-size:.82rem;font-weight:500">Müşteri Desteği</div>
+                <div class="text-muted" style="font-size:.75rem">Her Zaman Yanınızdayız</div>
+            </div>
+        </div>
+    </div>
+</section>

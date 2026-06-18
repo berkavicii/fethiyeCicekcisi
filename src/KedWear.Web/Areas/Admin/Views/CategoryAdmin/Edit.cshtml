@@ -1,0 +1,7 @@
+@model KedWear.Web.ViewModels.Admin.AdminCategoryViewModel
+@{
+    ViewData["Title"] = "Kategori Düzenle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@await Html.PartialAsync("Create", Model)

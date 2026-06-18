@@ -1,0 +1,61 @@
+@model IEnumerable<KedWear.Core.Entities.Order>
+@{
+    ViewData["Title"] = "Siparişlerim";
+}
+
+<div class="container py-5">
+    <h1 class="section-title mb-5">Siparişlerim</h1>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-bag-x fs-1 text-muted d-block mb-3"></i>
+            <p class="text-muted">Henüz siparişiniz yok.</p>
+            <a asp-controller="Product" asp-action="Index" class="btn-kw-dark mt-3">Alışverişe Başla</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var order in Model)
+        {
+            <div class="card border-0 bg-light-kw mb-3">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Sipariş No</small>
+                            <strong style="font-size:.9rem">@order.OrderNumber</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">Tarih</small>
+                            <span style="font-size:.88rem">@order.CreatedAt.ToString("dd.MM.yyyy")</span>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">Tutar</small>
+                            <span style="font-size:.88rem;font-weight:600">@order.TotalAmount.ToString("N2") ₺</span>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Durum</small>
+                            <span class="status-badge status-@order.Status.ToString().ToLower()">
+                                @(order.Status switch {
+                                    KedWear.Core.Enums.OrderStatus.Pending => "Bekliyor",
+                                    KedWear.Core.Enums.OrderStatus.PaymentPending => "Ödeme Bekleniyor",
+                                    KedWear.Core.Enums.OrderStatus.PaymentSuccess => "Ödeme Alındı",
+                                    KedWear.Core.Enums.OrderStatus.PaymentFailed => "Ödeme Başarısız",
+                                    KedWear.Core.Enums.OrderStatus.Processing => "Hazırlanıyor",
+                                    KedWear.Core.Enums.OrderStatus.Shipped => "Kargoya Verildi",
+                                    KedWear.Core.Enums.OrderStatus.Delivered => "Teslim Edildi",
+                                    KedWear.Core.Enums.OrderStatus.Cancelled => "İptal Edildi",
+                                    _ => order.Status.ToString()
+                                })
+                            </span>
+                        </div>
+                        <div class="col-md-2 text-md-end mt-3 mt-md-0">
+                            <a asp-controller="Order" asp-action="Detail" asp-route-orderNumber="@order.OrderNumber"
+                               style="font-size:.82rem;letter-spacing:.04em">Detay →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

@@ -1,0 +1,15 @@
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.csproj.AssemblyReference.cache
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.AssemblyInfoInputs.cache
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.AssemblyInfo.cs
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.csproj.CoreCompileInputs.cache
+/Users/berkavci/kedwear/src/KedWear.Application/bin/Debug/net8.0/KedWear.Application.deps.json
+/Users/berkavci/kedwear/src/KedWear.Application/bin/Debug/net8.0/KedWear.Application.dll
+/Users/berkavci/kedwear/src/KedWear.Application/bin/Debug/net8.0/KedWear.Application.pdb
+/Users/berkavci/kedwear/src/KedWear.Application/bin/Debug/net8.0/KedWear.Core.dll
+/Users/berkavci/kedwear/src/KedWear.Application/bin/Debug/net8.0/KedWear.Core.pdb
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear..BBAE3DE9.Up2Date
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.dll
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/refint/KedWear.Application.dll
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/KedWear.Application.pdb
+/Users/berkavci/kedwear/src/KedWear.Application/obj/Debug/net8.0/ref/KedWear.Application.dll
