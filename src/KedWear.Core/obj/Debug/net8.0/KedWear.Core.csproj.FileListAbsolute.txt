@@ -10,3 +10,16 @@
 /Users/berkavci/kedwear/src/KedWear.Core/obj/Debug/net8.0/refint/KedWear.Core.dll
 /Users/berkavci/kedwear/src/KedWear.Core/obj/Debug/net8.0/KedWear.Core.pdb
 /Users/berkavci/kedwear/src/KedWear.Core/obj/Debug/net8.0/ref/KedWear.Core.dll
+D:\kedwear\kedwear\src\KedWear.Core\bin\Debug\net8.0\KedWear.Core.deps.json
+D:\kedwear\kedwear\src\KedWear.Core\bin\Debug\net8.0\KedWear.Core.dll
+D:\kedwear\kedwear\src\KedWear.Core\bin\Debug\net8.0\KedWear.Core.pdb
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.csproj.AssemblyReference.cache
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.AssemblyInfoInputs.cache
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.AssemblyInfo.cs
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.csproj.CoreCompileInputs.cache
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.sourcelink.json
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.dll
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\refint\KedWear.Core.dll
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\KedWear.Core.pdb
+D:\kedwear\kedwear\src\KedWear.Core\obj\Debug\net8.0\ref\KedWear.Core.dll

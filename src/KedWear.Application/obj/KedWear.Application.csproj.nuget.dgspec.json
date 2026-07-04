@@ -1,20 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "/Users/berkavci/kedwear/src/KedWear.Application/KedWear.Application.csproj": {}
+    "D:\\kedwear\\kedwear\\src\\KedWear.Application\\KedWear.Application.csproj": {}
   },
   "projects": {
-    "/Users/berkavci/kedwear/src/KedWear.Application/KedWear.Application.csproj": {
+    "D:\\kedwear\\kedwear\\src\\KedWear.Application\\KedWear.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/berkavci/kedwear/src/KedWear.Application/KedWear.Application.csproj",
+        "projectUniqueName": "D:\\kedwear\\kedwear\\src\\KedWear.Application\\KedWear.Application.csproj",
         "projectName": "KedWear.Application",
-        "projectPath": "/Users/berkavci/kedwear/src/KedWear.Application/KedWear.Application.csproj",
-        "packagesPath": "/Users/berkavci/.nuget/packages/",
-        "outputPath": "/Users/berkavci/kedwear/src/KedWear.Application/obj/",
+        "projectPath": "D:\\kedwear\\kedwear\\src\\KedWear.Application\\KedWear.Application.csproj",
+        "packagesPath": "C:\\Users\\Berk\\.nuget\\packages\\",
+        "outputPath": "D:\\kedwear\\kedwear\\src\\KedWear.Application\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
         "configFilePaths": [
-          "/Users/berkavci/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Berk\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -26,8 +29,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/berkavci/kedwear/src/KedWear.Core/KedWear.Core.csproj": {
-                "projectPath": "/Users/berkavci/kedwear/src/KedWear.Core/KedWear.Core.csproj"
+              "D:\\kedwear\\kedwear\\src\\KedWear.Core\\KedWear.Core.csproj": {
+                "projectPath": "D:\\kedwear\\kedwear\\src\\KedWear.Core\\KedWear.Core.csproj"
               }
             }
           }
@@ -71,21 +74,24 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.403/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.421/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/Users/berkavci/kedwear/src/KedWear.Core/KedWear.Core.csproj": {
+    "D:\\kedwear\\kedwear\\src\\KedWear.Core\\KedWear.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/berkavci/kedwear/src/KedWear.Core/KedWear.Core.csproj",
+        "projectUniqueName": "D:\\kedwear\\kedwear\\src\\KedWear.Core\\KedWear.Core.csproj",
         "projectName": "KedWear.Core",
-        "projectPath": "/Users/berkavci/kedwear/src/KedWear.Core/KedWear.Core.csproj",
-        "packagesPath": "/Users/berkavci/.nuget/packages/",
-        "outputPath": "/Users/berkavci/kedwear/src/KedWear.Core/obj/",
+        "projectPath": "D:\\kedwear\\kedwear\\src\\KedWear.Core\\KedWear.Core.csproj",
+        "packagesPath": "C:\\Users\\Berk\\.nuget\\packages\\",
+        "outputPath": "D:\\kedwear\\kedwear\\src\\KedWear.Core\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
         "configFilePaths": [
-          "/Users/berkavci/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Berk\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -135,7 +141,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.403/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.421/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
