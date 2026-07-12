@@ -1,6 +1,9 @@
 using KedWear.Core.Entities;
 using KedWear.Core.Enums;
 using KedWear.Core.Interfaces.Repositories;
+using KedWear.Core.Interfaces.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace KedWear.Application.Services;
 
@@ -10,17 +13,26 @@ public class OrderService
     private readonly ICartRepository _cartRepo;
     private readonly IProductRepository _productRepo;
     private readonly IPaymentRepository _paymentRepo;
+    private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<OrderService> _logger;
 
     public OrderService(
         IOrderRepository orderRepo,
         ICartRepository cartRepo,
         IProductRepository productRepo,
-        IPaymentRepository paymentRepo)
+        IPaymentRepository paymentRepo,
+        IEmailService emailService,
+        IConfiguration configuration,
+        ILogger<OrderService> logger)
     {
         _orderRepo = orderRepo;
         _cartRepo = cartRepo;
         _productRepo = productRepo;
         _paymentRepo = paymentRepo;
+        _emailService = emailService;
+        _configuration = configuration;
+        _logger = logger;
     }
 
     public Task<Order?> GetOrderByIdAsync(int id) => _orderRepo.GetWithItemsAndPaymentAsync(id);
@@ -141,6 +153,42 @@ public class OrderService
 
         if (isSuccess && payment.Order.UserId != null)
             await _cartRepo.ClearCartAsync(payment.Order.UserId, null);
+
+        if (isSuccess)
+            await SendOrderConfirmationEmailsAsync(payment.Order);
+    }
+
+    /// <summary>Fired once payment is actually confirmed (not at checkout submission, since
+    /// the payment can still fail after that) — emails the customer and, separately, notifies
+    /// the store's contact address so a new order doesn't go unnoticed.</summary>
+    private async Task SendOrderConfirmationEmailsAsync(Order order)
+    {
+        if (!string.IsNullOrWhiteSpace(order.ShippingEmail))
+        {
+            try
+            {
+                await _emailService.SendAsync(order.ShippingEmail, order.ShippingFirstName,
+                    $"Siparişiniz Alındı — {order.OrderNumber}", EmailTemplates.OrderConfirmationCustomer(order));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Sipariş onay e-postası gönderilemedi: {OrderNumber}", order.OrderNumber);
+            }
+        }
+
+        var adminEmail = _configuration["SiteSettings:ContactEmail"];
+        if (!string.IsNullOrWhiteSpace(adminEmail))
+        {
+            try
+            {
+                await _emailService.SendAsync(adminEmail, "KedWear Admin",
+                    $"Yeni Sipariş — {order.OrderNumber}", EmailTemplates.OrderNotificationAdmin(order));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Admin sipariş bildirimi gönderilemedi: {OrderNumber}", order.OrderNumber);
+            }
+        }
     }
 
     private static string GenerateOrderNumber()

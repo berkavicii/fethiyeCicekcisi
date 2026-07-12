@@ -1,5 +1,6 @@
 using KedWear.Application.Services;
 using KedWear.Core.Entities;
+using KedWear.Core.Interfaces.Services;
 using KedWear.Web.ViewModels.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,16 +14,19 @@ public class AccountController : Controller
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly CartService _cartService;
+    private readonly IEmailService _emailService;
     private const string SessionIdKey = "cart_session_id";
 
     public AccountController(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
-        CartService cartService)
+        CartService cartService,
+        IEmailService emailService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _cartService = cartService;
+        _emailService = emailService;
     }
 
     [HttpGet("giris")]
@@ -67,6 +71,12 @@ public class AccountController : Controller
             return View(model);
         }
 
+        if (result.IsNotAllowed)
+        {
+            ModelState.AddModelError(string.Empty, "Giriş yapmadan önce e-posta adresinizi doğrulamanız gerekiyor. Gelen kutunuzu (ve spam klasörünü) kontrol edin.");
+            return View(model);
+        }
+
         ModelState.AddModelError(string.Empty, "E-posta veya şifre hatalı.");
         return View(model);
     }
@@ -102,12 +112,25 @@ public class AccountController : Controller
         if (result.Succeeded)
         {
             await _userManager.AddToRoleAsync(user, "Customer");
-            await _signInManager.SignInAsync(user, isPersistent: false);
 
             var sessionId = HttpContext.Session.GetString(SessionIdKey);
             if (!string.IsNullOrEmpty(sessionId))
                 await _cartService.MigrateGuestCartAsync(sessionId, user.Id);
 
+            var confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, token = confirmToken }, Request.Scheme)!;
+            await _emailService.SendAsync(user.Email!, $"{user.FirstName} {user.LastName}",
+                "E-postanızı Doğrulayın — KedWear", EmailTemplates.ConfirmEmail(user.FirstName, confirmUrl));
+
+            // Confirmation is only actually enforced once SMTP is configured (see Program.cs) —
+            // until then, sign the user in immediately since they have no way to receive the link.
+            if (_userManager.Options.SignIn.RequireConfirmedEmail)
+            {
+                TempData["Success"] = "Kayıt başarılı! Hesabınızı aktifleştirmek için e-postanıza gönderilen bağlantıya tıklayın.";
+                return RedirectToAction("Login");
+            }
+
+            await _signInManager.SignInAsync(user, isPersistent: false);
             return RedirectToAction("Index", "Home");
         }
 
@@ -115,6 +138,26 @@ public class AccountController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
 
         return View(model);
+    }
+
+    [HttpGet("email-dogrula")]
+    public async Task<IActionResult> ConfirmEmail(string? userId, string? token)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            return RedirectToAction("Login");
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            TempData["Error"] = "Doğrulama bağlantısı geçersiz.";
+            return RedirectToAction("Login");
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+        TempData[result.Succeeded ? "Success" : "Error"] = result.Succeeded
+            ? "E-posta adresiniz doğrulandı! Şimdi giriş yapabilirsiniz."
+            : "Doğrulama bağlantısı geçersiz veya süresi dolmuş.";
+        return RedirectToAction("Login");
     }
 
     [HttpPost("cikis")]
@@ -176,12 +219,47 @@ public class AccountController : Controller
         if (user != null)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            // TODO: Send email with reset link
-            // In production: use an email service
+            var resetUrl = Url.Action("ResetPassword", "Account", new { email = model.Email, token }, Request.Scheme)!;
+            await _emailService.SendAsync(user.Email!, $"{user.FirstName} {user.LastName}",
+                "Şifre Sıfırlama — KedWear", EmailTemplates.PasswordReset(user.FirstName, resetUrl));
         }
 
         TempData["Success"] = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.";
         return RedirectToAction("Login");
+    }
+
+    [HttpGet("sifre-sifirla")]
+    public IActionResult ResetPassword(string? token = null, string? email = null)
+    {
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
+            return RedirectToAction("Login");
+        return View(new ResetPasswordViewModel { Token = token, Email = email });
+    }
+
+    [HttpPost("sifre-sifirla")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user is null)
+        {
+            // Don't reveal whether the account exists
+            TempData["Success"] = "Şifreniz başarıyla sıfırlandı.";
+            return RedirectToAction("Login");
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+        if (result.Succeeded)
+        {
+            TempData["Success"] = "Şifreniz başarıyla sıfırlandı, şimdi giriş yapabilirsiniz.";
+            return RedirectToAction("Login");
+        }
+
+        foreach (var error in result.Errors)
+            ModelState.AddModelError(string.Empty, error.Description);
+        return View(model);
     }
 
     [HttpGet("erisim-engellendi")]

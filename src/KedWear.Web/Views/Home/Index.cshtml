@@ -4,13 +4,17 @@
 }
 
 <section class="hero-section">
-    <!-- Background image -->
-    <div class="hero-bg" style="background-image:url('https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg')"></div>
+    <!-- Crossfading background layers -->
+    <div class="hero-bg">
+        <div class="hero-bg-layer" style="background-image:url('https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg')"></div>
+        <div class="hero-bg-layer" style="background-image:url('https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg')"></div>
+        <div class="hero-bg-layer" style="background-image:url('https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg')"></div>
+    </div>
     <div class="hero-overlay"></div>
     <div class="container position-relative" style="z-index:2">
         <div class="row">
             <div class="col-lg-6 col-xl-5">
-                <span class="hero-tag">Yeni Koleksiyon 2025</span>
+                <span class="hero-tag">Yeni Koleksiyon 2026</span>
                 <h1 class="mb-4">Her parça<br>bir hikaye<br>anlatır.</h1>
                 <p class="hero-sub mb-5">Minimal, şık ve özgün tasarımlar. Kıyafet, çanta ve aksesuarlarla özgün stilinizi yaratın.</p>
                 <div class="d-flex flex-wrap gap-3">
@@ -20,44 +24,48 @@
             </div>
         </div>
     </div>
+    <a href="#kategoriler" class="scroll-indicator">
+        Keşfet
+        <i class="bi bi-chevron-down"></i>
+    </a>
 </section>
 
-<section class="py-5 bg-white">
+<section class="py-5 bg-white" id="kategoriler">
     <div class="container py-4">
-        <div class="text-center mb-5">
+        <div class="text-center mb-5 reveal">
             <p class="section-tag">Kategoriler</p>
             <h2 class="section-title">Koleksiyonumuzu Keşfet</h2>
         </div>
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-4 reveal">
                 <a asp-controller="Product" asp-action="Category" asp-route-slug="tisort" class="d-block">
                     <div class="category-card">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg"
                              alt="T-Shirt" loading="lazy" />
                         <div class="category-card-label">
-                            <h3>T-Shirt</h3><small>Koleksiyonu Gör →</small>
+                            <h3>T-Shirt</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 reveal" style="transition-delay:.08s">
                 <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="d-block">
                     <div class="category-card">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg"
                              alt="Çanta" loading="lazy" />
                         <div class="category-card-label">
-                            <h3>Çanta</h3><small>Koleksiyonu Gör →</small>
+                            <h3>Çanta</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 reveal" style="transition-delay:.16s">
                 <a asp-controller="Product" asp-action="Category" asp-route-slug="takim" class="d-block">
                     <div class="category-card">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg"
                              alt="Takım" loading="lazy" />
                         <div class="category-card-label">
-                            <h3>Takım</h3><small>Koleksiyonu Gör →</small>
+                            <h3>Takım</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
                         </div>
                     </div>
                 </a>
@@ -68,12 +76,12 @@
 
 <section class="py-5 bg-light-kw">
     <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-end mb-4">
+        <div class="d-flex justify-content-between align-items-end mb-4 reveal">
             <div>
                 <p class="section-tag">Seçili Ürünler</p>
                 <h2 class="section-title mb-0">Öne Çıkanlar</h2>
             </div>
-            <a asp-controller="Product" asp-action="Index" class="d-none d-md-block" style="font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;">Tümünü Gör →</a>
+            <a asp-controller="Product" asp-action="Index" class="d-none d-md-block" style="font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
         </div>
         @{
             var fp = ViewBag.FeaturedProducts as IEnumerable<KedWear.Core.Entities.Product> ?? Enumerable.Empty<KedWear.Core.Entities.Product>();
@@ -81,7 +89,7 @@
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-lg-4">
             @foreach (var product in fp)
             {
-                <div class="col">
+                <div class="col reveal">
                     <a asp-controller="Product" asp-action="Detail" asp-route-slug="@product.Slug" class="d-block">
                         <div class="product-card">
                             <div class="product-card-image">
@@ -120,28 +128,24 @@
     </div>
 </section>
 
-<section class="py-4 border-top border-bottom">
-    <div class="container">
+<section class="py-5 bg-white">
+    <div class="container py-4">
         <div class="row g-4 text-center">
-            <div class="col-6 col-md-3">
-                <i class="bi bi-truck fs-4 mb-2 d-block"></i>
-                <div style="font-size:.82rem;font-weight:500">Hızlı Kargo</div>
-                <div class="text-muted" style="font-size:.75rem">1-3 İş Günü</div>
+            <div class="col-6 col-md-3 reveal">
+                <div class="stat-counter"><span data-counter="1200" data-counter-suffix="+">0</span></div>
+                <div class="stat-label">Mutlu Müşteri</div>
             </div>
-            <div class="col-6 col-md-3">
-                <i class="bi bi-shield-check fs-4 mb-2 d-block"></i>
-                <div style="font-size:.82rem;font-weight:500">Güvenli Ödeme</div>
-                <div class="text-muted" style="font-size:.75rem">PayTR ile %100 Güvenli</div>
+            <div class="col-6 col-md-3 reveal" style="transition-delay:.06s">
+                <div class="stat-counter"><span data-counter="81" data-counter-suffix="+">0</span></div>
+                <div class="stat-label">Şehre Kargo</div>
             </div>
-            <div class="col-6 col-md-3">
-                <i class="bi bi-arrow-return-left fs-4 mb-2 d-block"></i>
-                <div style="font-size:.82rem;font-weight:500">Kolay İade</div>
-                <div class="text-muted" style="font-size:.75rem">14 Gün İade Hakkı</div>
+            <div class="col-6 col-md-3 reveal" style="transition-delay:.12s">
+                <div class="stat-counter"><span data-counter="50" data-counter-suffix="+">0</span></div>
+                <div class="stat-label">Ürün Çeşidi</div>
             </div>
-            <div class="col-6 col-md-3">
-                <i class="bi bi-headset fs-4 mb-2 d-block"></i>
-                <div style="font-size:.82rem;font-weight:500">Müşteri Desteği</div>
-                <div class="text-muted" style="font-size:.75rem">Her Zaman Yanınızdayız</div>
+            <div class="col-6 col-md-3 reveal" style="transition-delay:.18s">
+                <div class="stat-counter"><span data-counter="100" data-counter-suffix="%">0</span></div>
+                <div class="stat-label">Güvenli Ödeme</div>
             </div>
         </div>
     </div>

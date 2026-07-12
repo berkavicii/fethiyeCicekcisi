@@ -36,7 +36,9 @@ public class ProductRepository : Repository<Product>, IProductRepository
         string? searchTerm = null,
         string? sortBy = null)
     {
-        var query = _dbSet.Include(p => p.Category).Include(p => p.Images).AsQueryable();
+        var query = _dbSet.Include(p => p.Category).Include(p => p.Images)
+            .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
+            .AsQueryable();
 
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -60,14 +62,28 @@ public class ProductRepository : Repository<Product>, IProductRepository
     public async Task<Product?> GetWithImagesAndVariantsAsync(int id) =>
         await _dbSet.Include(p => p.Category)
                     .Include(p => p.Images.OrderBy(i => i.DisplayOrder))
-                    .Include(p => p.Variants.Where(v => v.IsActive))
+                    .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
                     .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task<Product?> GetWithImagesAndVariantsBySlugAsync(string slug) =>
         await _dbSet.Include(p => p.Category)
                     .Include(p => p.Images.OrderBy(i => i.DisplayOrder))
-                    .Include(p => p.Variants.Where(v => v.IsActive))
+                    .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
                     .FirstOrDefaultAsync(p => p.Slug == slug);
+
+    /// <summary>Admin editing needs to see inactive-but-not-deleted variants too (so they can
+    /// be reactivated), unlike the customer-facing methods above which only show active ones.</summary>
+    public async Task<Product?> GetForAdminEditAsync(int id) =>
+        await _dbSet.Include(p => p.Category)
+                    .Include(p => p.Images.OrderBy(i => i.DisplayOrder))
+                    .Include(p => p.Variants.Where(v => !v.IsDeleted))
+                    .FirstOrDefaultAsync(p => p.Id == id);
+
+    public async Task<ProductImage?> GetImageByIdAsync(int imageId) =>
+        await _context.Set<ProductImage>().FindAsync(imageId);
+
+    public void RemoveImage(ProductImage image) =>
+        _context.Set<ProductImage>().Remove(image);
 }
 
 public class CategoryRepository : Repository<Category>, ICategoryRepository
@@ -192,5 +208,6 @@ public class PaymentRepository : Repository<Payment>, IPaymentRepository
         await _dbSet.FirstOrDefaultAsync(p => p.OrderId == orderId);
 
     public async Task<Payment?> GetByMerchantOidAsync(string merchantOid) =>
-        await _dbSet.Include(p => p.Order).FirstOrDefaultAsync(p => p.PayTRMerchantOid == merchantOid);
+        await _dbSet.Include(p => p.Order).ThenInclude(o => o.Items)
+                    .FirstOrDefaultAsync(p => p.PayTRMerchantOid == merchantOid);
 }

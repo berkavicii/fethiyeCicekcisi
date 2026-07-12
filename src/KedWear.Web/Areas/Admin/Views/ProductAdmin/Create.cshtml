@@ -4,7 +4,7 @@
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
-<form asp-controller="ProductAdmin" asp-action="Create" method="post" enctype="multipart/form-data">
+<form asp-controller="ProductAdmin" asp-action="Create" method="post" enctype="multipart/form-data" data-upload-form>
     @Html.AntiForgeryToken()
     <div class="row g-4">
         <div class="col-lg-8">
@@ -65,8 +65,9 @@
                     <h6 class="mb-0 fw-600">Ürün Görselleri</h6>
                 </div>
                 <div class="card-body">
-                    <input type="file" name="images" class="form-control" multiple accept="image/*" />
-                    <small class="text-muted">İlk yüklenen görsel ana görsel olarak ayarlanır. Maks 5MB / görsel.</small>
+                    <input type="file" name="images" class="form-control" multiple accept="image/*" capture="environment" data-image-input />
+                    <small class="text-muted">İlk yüklenen görsel ana görsel olarak ayarlanır. Maks 10MB / görsel. JPG, PNG, WEBP, GIF desteklenir — iPhone HEIC/HEIF fotoğrafları otomatik olarak JPEG'e dönüştürülür.</small>
+                    <div class="row g-2 mt-1" data-image-preview></div>
                 </div>
             </div>
         </div>

@@ -9,7 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddApplication();
+builder.Services.AddApplication(builder.Configuration);
+
+// Email confirmation is only enforced once a real SMTP provider is configured — otherwise
+// the confirmation link would never actually be delivered and every new signup would be
+// locked out. Add Smtp:Host in appsettings (or an env var override) to turn this on.
+var smtpConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["Smtp:Host"]);
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
@@ -19,7 +24,7 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireDigit = true;
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedEmail = smtpConfigured;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();

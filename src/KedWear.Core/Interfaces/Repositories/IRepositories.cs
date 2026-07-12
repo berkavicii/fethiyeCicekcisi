@@ -14,6 +14,9 @@ public interface IProductRepository : IRepository<Product>
         string? sortBy = null);
     Task<Product?> GetWithImagesAndVariantsAsync(int id);
     Task<Product?> GetWithImagesAndVariantsBySlugAsync(string slug);
+    Task<Product?> GetForAdminEditAsync(int id);
+    Task<ProductImage?> GetImageByIdAsync(int imageId);
+    void RemoveImage(ProductImage image);
 }
 
 public interface ICategoryRepository : IRepository<Category>

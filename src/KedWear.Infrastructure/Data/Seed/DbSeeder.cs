@@ -1,8 +1,10 @@
 using KedWear.Core.Entities;
 using KedWear.Core.Enums;
+using KedWear.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace KedWear.Infrastructure.Data.Seed;
@@ -19,17 +21,203 @@ public static class DbSeeder
 
         try
         {
-            await context.Database.EnsureCreatedAsync();
+            // Migrate is for a real (relational) provider like Postgres — EnsureCreated is
+            // the zero-setup path for the InMemory provider, which doesn't support migrations
+            // at all and throws if you call MigrateAsync against it.
+            if (context.Database.IsRelational())
+                await context.Database.MigrateAsync();
+            else
+                await context.Database.EnsureCreatedAsync();
+
             await SeedRolesAsync(roleManager);
             await SeedAdminUserAsync(userManager);
             await SeedCategoriesAsync(context);
             await SeedProductsAsync(context);
+            await SeedRealProductsFromFolderAsync(scope.ServiceProvider, context, logger);
             logger.LogInformation("Seed data başarıyla yüklendi.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Seed data yüklenirken hata oluştu.");
         }
+    }
+
+    /// <summary>Reads src/KedWear.Web/seed-images/urunler.txt (a simple hand-editable manifest)
+    /// and, for each block, imports the product's photos from its sibling folder and creates a
+    /// real Product + ProductImage rows — the "launch with my actual catalog already loaded"
+    /// path, distinct from the fake Shopier-CDN demo products above. Runs every startup and is
+    /// idempotent (skips products that already exist by name), so re-running after adding more
+    /// entries to the manifest picks up only the new ones.</summary>
+    private static async Task SeedRealProductsFromFolderAsync(IServiceProvider services, AppDbContext context, ILogger logger)
+    {
+        var env = services.GetRequiredService<IHostEnvironment>();
+        var fileService = services.GetRequiredService<IFileService>();
+
+        var seedRoot = Path.Combine(env.ContentRootPath, "seed-images");
+        var manifestPath = Path.Combine(seedRoot, "urunler.txt");
+        if (!File.Exists(manifestPath)) return;
+
+        var entries = ParseManifest(await File.ReadAllTextAsync(manifestPath));
+        if (entries.Count == 0) return;
+
+        var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+        foreach (var entry in entries)
+        {
+            if (!entry.TryGetValue("ad", out var name) || string.IsNullOrWhiteSpace(name))
+            {
+                logger.LogWarning("seed-images/urunler.txt: 'ad' alanı olmayan bir blok atlandı.");
+                continue;
+            }
+
+            if (await context.Products.AnyAsync(p => p.Name == name))
+                continue; // already seeded on a previous run
+
+            entry.TryGetValue("klasor", out var folder);
+            entry.TryGetValue("kategori", out var categoryName);
+            entry.TryGetValue("fiyat", out var priceText);
+            entry.TryGetValue("kisa_aciklama", out var shortDescription);
+            entry.TryGetValue("aciklama", out var description);
+
+            if (string.IsNullOrWhiteSpace(folder) || string.IsNullOrWhiteSpace(categoryName))
+            {
+                logger.LogWarning("seed-images/urunler.txt: '{Name}' için 'klasor' ya da 'kategori' eksik, atlandı.", name);
+                continue;
+            }
+
+            if (!decimal.TryParse(priceText, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var price))
+            {
+                logger.LogWarning("seed-images/urunler.txt: '{Name}' için geçerli bir 'fiyat' yok, atlandı.", name);
+                continue;
+            }
+
+            var category = await context.Categories.FirstOrDefaultAsync(c => c.Name == categoryName);
+            if (category is null)
+            {
+                category = new Category
+                {
+                    Name = categoryName,
+                    Slug = Slugify(categoryName),
+                    IsActive = true,
+                    DisplayOrder = await context.Categories.CountAsync() + 1
+                };
+                await context.Categories.AddAsync(category);
+                await context.SaveChangesAsync();
+            }
+
+            var product = new Product
+            {
+                Name = name,
+                Slug = await GenerateUniqueSlugAsync(context, name),
+                ShortDescription = shortDescription,
+                Description = description,
+                Price = price,
+                CategoryId = category.Id,
+                Status = ProductStatus.Active,
+                IsFeatured = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var photosDir = Path.Combine(seedRoot, folder);
+            if (Directory.Exists(photosDir))
+            {
+                var allFiles = Directory.GetFiles(photosDir).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
+                var files = allFiles.Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+
+                // This is a server-only batch import (no browser in the loop, unlike the admin
+                // upload form), so there's no HEIC→JPEG auto-conversion here — ImageSharp can't
+                // decode HEIC at all. Flag it loudly instead of silently shipping an imageless
+                // product, since that failure mode is easy to miss.
+                var skippedHeic = allFiles.Except(files)
+                    .Where(f => f.EndsWith(".heic", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".heif", StringComparison.OrdinalIgnoreCase))
+                    .Select(Path.GetFileName)
+                    .ToList();
+                if (skippedHeic.Count > 0)
+                {
+                    logger.LogWarning(
+                        "seed-images/{Folder}: {Count} HEIC/HEIF dosyası atlandı ({Files}) — bu klasörden içe aktarma tarayıcı dönüşümü içermiyor, " +
+                        "bu dosyaları önce JPG/PNG'ye çevirip tekrar denemeniz gerekiyor ('{Name}' ürünü).",
+                        folder, skippedHeic.Count, string.Join(", ", skippedHeic), name);
+                }
+                var otherSkipped = allFiles.Except(files).Select(Path.GetFileName).Except(skippedHeic).ToList();
+                if (otherSkipped.Count > 0)
+                {
+                    logger.LogWarning("seed-images/{Folder}: desteklenmeyen formatta {Count} dosya atlandı ({Files}).", folder, otherSkipped.Count, string.Join(", ", otherSkipped));
+                }
+                if (files.Count == 0 && allFiles.Count > 0)
+                {
+                    logger.LogWarning("seed-images/{Folder}: klasörde hiç desteklenen görsel bulunamadı, '{Name}' görselsiz eklendi.", folder, name);
+                }
+
+                int order = 0;
+                foreach (var file in files)
+                {
+                    var url = await fileService.ImportLocalImageAsync(file, "products");
+                    product.Images.Add(new ProductImage
+                    {
+                        ImageUrl = url,
+                        AltText = name,
+                        IsMain = order == 0,
+                        DisplayOrder = order++
+                    });
+                    if (order == 1) product.MainImageUrl = url;
+                }
+            }
+            else
+            {
+                logger.LogWarning("seed-images/{Folder} klasörü bulunamadı ('{Name}' için görselsiz eklendi).", folder, name);
+            }
+
+            await context.Products.AddAsync(product);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static List<Dictionary<string, string>> ParseManifest(string text)
+    {
+        var blocks = new List<Dictionary<string, string>>();
+        var current = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawLine in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+            {
+                if (current.Count > 0) { blocks.Add(current); current = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
+                continue;
+            }
+            if (line.StartsWith('#')) continue;
+
+            var colonIndex = line.IndexOf(':');
+            if (colonIndex <= 0) continue;
+
+            var key = line[..colonIndex].Trim().ToLowerInvariant();
+            var value = line[(colonIndex + 1)..].Trim();
+            if (value.Length > 0) current[key] = value;
+        }
+        if (current.Count > 0) blocks.Add(current);
+
+        return blocks;
+    }
+
+    private static string Slugify(string text)
+    {
+        var slug = text.ToLowerInvariant()
+            .Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u")
+            .Replace("ş", "s").Replace("ö", "o").Replace("ç", "c")
+            .Replace(" ", "-");
+        slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[^a-z0-9\-]", "");
+        return System.Text.RegularExpressions.Regex.Replace(slug, @"-+", "-").Trim('-');
+    }
+
+    private static async Task<string> GenerateUniqueSlugAsync(AppDbContext context, string name)
+    {
+        var baseSlug = Slugify(name);
+        var slug = baseSlug;
+        var counter = 1;
+        while (await context.Products.AnyAsync(p => p.Slug == slug))
+            slug = $"{baseSlug}-{counter++}";
+        return slug;
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)

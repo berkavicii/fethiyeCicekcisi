@@ -1,6 +1,7 @@
 using KedWear.Core.Entities;
 using KedWear.Core.Enums;
 using KedWear.Core.Interfaces.Repositories;
+using KedWear.Core.Interfaces.Services;
 
 namespace KedWear.Application.Services;
 
@@ -8,11 +9,13 @@ public class ProductService
 {
     private readonly IProductRepository _productRepo;
     private readonly ICategoryRepository _categoryRepo;
+    private readonly IFileService _fileService;
 
-    public ProductService(IProductRepository productRepo, ICategoryRepository categoryRepo)
+    public ProductService(IProductRepository productRepo, ICategoryRepository categoryRepo, IFileService fileService)
     {
         _productRepo = productRepo;
         _categoryRepo = categoryRepo;
+        _fileService = fileService;
     }
 
     public async Task<(IEnumerable<Product> Products, int TotalCount, int TotalPages)> GetPagedProductsAsync(
@@ -28,6 +31,11 @@ public class ProductService
 
     public Task<Product?> GetProductByIdAsync(int id) =>
         _productRepo.GetWithImagesAndVariantsAsync(id);
+
+    /// <summary>Like GetProductByIdAsync but includes inactive (not just active) variants,
+    /// so the admin edit screen can show/reactivate a size that was toggled off.</summary>
+    public Task<Product?> GetProductForAdminEditAsync(int id) =>
+        _productRepo.GetForAdminEditAsync(id);
 
     public Task<IEnumerable<Product>> GetFeaturedProductsAsync(int count = 8) =>
         _productRepo.GetFeaturedAsync(count);
@@ -52,12 +60,61 @@ public class ProductService
 
     public async Task DeleteProductAsync(int id)
     {
-        var product = await _productRepo.GetByIdAsync(id);
+        var product = await _productRepo.GetWithImagesAndVariantsAsync(id);
         if (product is null) return;
+
+        foreach (var image in product.Images)
+            await _fileService.DeleteImageAsync(image.ImageUrl);
+
         product.IsDeleted = true;
         product.UpdatedAt = DateTime.UtcNow;
         _productRepo.Update(product);
         await _productRepo.SaveChangesAsync();
+    }
+
+    /// <summary>Removes a single product image: deletes the DB row, its physical file, and
+    /// promotes another image to "main" if the removed one was the cover photo.</summary>
+    public async Task<bool> DeleteProductImageAsync(int imageId)
+    {
+        var image = await _productRepo.GetImageByIdAsync(imageId);
+        if (image is null) return false;
+
+        var product = await _productRepo.GetWithImagesAndVariantsAsync(image.ProductId);
+        if (product is null) return false;
+
+        var wasMain = image.IsMain;
+        product.Images.Remove(image);
+        _productRepo.RemoveImage(image);
+
+        if (wasMain)
+        {
+            var next = product.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault();
+            if (next != null) next.IsMain = true;
+            product.MainImageUrl = next?.ImageUrl;
+        }
+
+        product.UpdatedAt = DateTime.UtcNow;
+        _productRepo.Update(product);
+        await _productRepo.SaveChangesAsync();
+
+        await _fileService.DeleteImageAsync(image.ImageUrl);
+        return true;
+    }
+
+    public async Task<bool> SetMainProductImageAsync(int productId, int imageId)
+    {
+        var product = await _productRepo.GetWithImagesAndVariantsAsync(productId);
+        var target = product?.Images.FirstOrDefault(i => i.Id == imageId);
+        if (product is null || target is null) return false;
+
+        foreach (var img in product.Images)
+            img.IsMain = img.Id == imageId;
+        product.MainImageUrl = target.ImageUrl;
+        product.UpdatedAt = DateTime.UtcNow;
+
+        _productRepo.Update(product);
+        await _productRepo.SaveChangesAsync();
+        return true;
     }
 
     public async Task ToggleProductStatusAsync(int id)

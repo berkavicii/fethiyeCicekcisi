@@ -29,7 +29,7 @@
 
     <div class="row g-5">
         <!-- Gallery -->
-        <div class="col-lg-6">
+        <div class="col-lg-6 reveal">
             <div class="product-gallery-main mb-3">
                 <img id="mainProductImage"
                      src="@(mainImage?.ImageUrl ?? product.MainImageUrl ?? "/images/products/placeholder.jpg")"
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Product Info -->
-        <div class="col-lg-6">
+        <div class="col-lg-6 reveal" style="transition-delay:.1s">
             @if (product.Category != null)
             {
                 <p class="text-muted mb-2" style="font-size:.8rem;letter-spacing:.1em;text-transform:uppercase">@product.Category.Name</p>
@@ -108,6 +108,7 @@
                             <button class="variant-btn @(!inStock ? "disabled" : "") @(sizes.IndexOf(size) == 0 && inStock ? "active" : "")"
                                     data-variant-group="size"
                                     data-variant-id="@sizeVariant?.Id"
+                                    data-stock="@(sizeVariant?.StockQuantity ?? 0)"
                                     @(inStock ? "" : "disabled")>
                                 @size
                             </button>
@@ -136,10 +137,16 @@
                 var totalStock = product.Variants.Any()
                     ? product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity)
                     : 0;
+                var initialSizeVariant = sizes
+                    .Select(s => product.Variants.FirstOrDefault(v => v.Size == s && v.IsActive))
+                    .FirstOrDefault(v => v != null && v.StockQuantity > 0);
+                var initialStock = sizes.Any() ? (initialSizeVariant?.StockQuantity ?? 0) : totalStock;
             }
-            @if (product.Variants.Any() && totalStock <= 5 && totalStock > 0)
+            @if (product.Variants.Any())
             {
-                <p class="text-warning mt-2" style="font-size:.82rem"><i class="bi bi-exclamation-triangle me-1"></i>Son @totalStock adet!</p>
+                <p id="stockWarning" class="text-warning mt-2" style="font-size:.82rem; @(initialStock is > 0 and <= 5 ? "" : "display:none")">
+                    <i class="bi bi-exclamation-triangle me-1"></i><span id="stockWarningText">Son @initialStock adet!</span>
+                </p>
             }
 
             <!-- Product Details accordion -->
@@ -185,7 +192,7 @@
     <!-- Related Products -->
     @if (Model.RelatedProducts.Any())
     {
-        <div class="mt-6 pt-5 border-top">
+        <div class="mt-6 pt-5 border-top reveal">
             <h2 class="section-title mb-4">İlgili Ürünler</h2>
             <div class="row row-cols-2 row-cols-md-4 g-3">
                 @foreach (var related in Model.RelatedProducts)

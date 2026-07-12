@@ -2,6 +2,12 @@ using KedWear.Core.Interfaces.Repositories;
 using KedWear.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace KedWear.Application.Services;
 
@@ -9,24 +15,58 @@ public class FileService : IFileService
 {
     private readonly IWebHostEnvironment _env;
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
-    private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
+    // Modern phone cameras routinely produce 5-10MB JPEGs; the server resizes/recompresses
+    // on upload anyway (see UploadImageAsync), so a generous input ceiling costs nothing.
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+    private const int MaxDimension = 1600;
+    private const string UploadsRoot = "uploads";
 
     public FileService(IWebHostEnvironment env) => _env = env;
 
     public async Task<string> UploadImageAsync(Stream fileStream, string fileName, string folder = "products")
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        var uniqueName = $"{Guid.NewGuid()}{ext}";
-        var uploadPath = Path.Combine(_env.WebRootPath, "images", folder);
-
-        Directory.CreateDirectory(uploadPath);
-
-        var filePath = Path.Combine(uploadPath, uniqueName);
-        await using var stream = File.Create(filePath);
-        await fileStream.CopyToAsync(stream);
-
-        return $"/images/{folder}/{uniqueName}";
+        return await ProcessAndSaveAsync(fileStream, ext, folder);
     }
+
+    public async Task<string> ImportLocalImageAsync(string sourceFilePath, string folder = "products")
+    {
+        var ext = Path.GetExtension(sourceFilePath).ToLowerInvariant();
+        await using var stream = File.OpenRead(sourceFilePath);
+        return await ProcessAndSaveAsync(stream, ext, folder);
+    }
+
+    private async Task<string> ProcessAndSaveAsync(Stream fileStream, string ext, string folder)
+    {
+        var uniqueName = $"{Guid.NewGuid()}{ext}";
+        var uploadPath = Path.Combine(_env.WebRootPath, UploadsRoot, folder);
+        Directory.CreateDirectory(uploadPath);
+        var filePath = Path.Combine(uploadPath, uniqueName);
+
+        using var image = await Image.LoadAsync(fileStream);
+
+        if (image.Width > MaxDimension || image.Height > MaxDimension)
+        {
+            image.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Mode = ResizeMode.Max,
+                Size = new Size(MaxDimension, MaxDimension)
+            }));
+        }
+
+        var encoder = GetEncoderFor(ext);
+        await image.SaveAsync(filePath, encoder);
+
+        return $"/{UploadsRoot}/{folder}/{uniqueName}";
+    }
+
+    private static SixLabors.ImageSharp.Formats.IImageEncoder GetEncoderFor(string ext) => ext switch
+    {
+        ".jpg" or ".jpeg" => new JpegEncoder { Quality = 82 },
+        ".webp" => new WebpEncoder { Quality = 82 },
+        ".gif" => new GifEncoder(),
+        _ => new PngEncoder()
+    };
 
     public Task DeleteImageAsync(string imageUrl)
     {
@@ -37,10 +77,63 @@ public class FileService : IFileService
         return Task.CompletedTask;
     }
 
-    public bool IsValidImage(string fileName, long fileSize)
+    public bool IsValidImage(string fileName, long fileSize) =>
+        GetImageValidationError(fileName, fileSize) is null;
+
+    public string? GetImageValidationError(string fileName, long fileSize)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        return AllowedExtensions.Contains(ext) && fileSize <= MaxFileSizeBytes;
+        if (!AllowedExtensions.Contains(ext))
+            return $"desteklenmeyen dosya formatı ({(string.IsNullOrEmpty(ext) ? "uzantısız" : ext)})";
+        if (fileSize <= 0)
+            return "dosya boş görünüyor";
+        if (fileSize > MaxFileSizeBytes)
+            return $"dosya boyutu {MaxFileSizeBytes / 1024 / 1024}MB'ı aşıyor ({fileSize / 1024.0 / 1024.0:0.0}MB)";
+        return null;
+    }
+
+    public bool IsValidImageContent(Stream fileStream)
+    {
+        var header = ReadHeader(fileStream, 12);
+        if (header is null) return false;
+
+        // JPEG: FF D8 FF
+        if (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF) return true;
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (header.Length >= 8 && header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
+        // GIF: "GIF87a" or "GIF89a"
+        if (header.Length >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F') return true;
+        // WEBP: "RIFF"....."WEBP"
+        if (header.Length >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+            && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') return true;
+
+        return false;
+    }
+
+    private static readonly string[] HeicBrands = ["heic", "heix", "heim", "heis", "hevc", "hevm", "hevs", "mif1", "msf1"];
+
+    /// <summary>Detects HEIC/HEIF content by its ISO-BMFF "ftyp" box, independent of the
+    /// file's extension — some iOS share/export paths label a still-HEIC file ".jpg", so an
+    /// extension-only check misses it. This is what lets the server tell an admin "this really
+    /// is a HEIC file the browser failed to convert" instead of a generic "corrupt file".</summary>
+    public bool IsHeicContent(Stream fileStream)
+    {
+        var header = ReadHeader(fileStream, 12);
+        if (header is null || header.Length < 12) return false;
+        if (header[4] != 'f' || header[5] != 't' || header[6] != 'y' || header[7] != 'p') return false;
+        var brand = System.Text.Encoding.ASCII.GetString(header, 8, 4).ToLowerInvariant();
+        return HeicBrands.Contains(brand);
+    }
+
+    private static byte[]? ReadHeader(Stream fileStream, int length)
+    {
+        if (!fileStream.CanSeek) return null;
+        fileStream.Position = 0;
+        var header = new byte[length];
+        var read = fileStream.Read(header, 0, header.Length);
+        fileStream.Position = 0;
+        if (read < 4) return null;
+        return read < length ? header[..read] : header;
     }
 }
 

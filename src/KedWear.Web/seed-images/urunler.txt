@@ -1,0 +1,51 @@
+# ============================================================
+# GERÇEK ÜRÜN LİSTESİ — canlıya çıkmadan önce site açılışında
+# hazır gelecek ürünler burada tanımlanır.
+#
+# NASIL KULLANILIR:
+# 1) Her ürün için aşağıdaki gibi bir blok yaz (bloklar arasında
+#    en az bir boş satır bırak).
+# 2) "klasor:" alanında yazdığın isimle aynı adda bir klasör aç
+#    (bu dosyayla aynı yerde, yani seed-images/ altında) ve o
+#    ürüne ait fotoğrafları oraya koy (jpg/jpeg/png/webp).
+#    ÖNEMLİ: HEIC/HEIF (iPhone'un varsayılan formatı) burada
+#    OTOMATİK DÖNÜŞTÜRÜLMÜYOR (admin panelindeki yüklemeden farklı
+#    olarak, burada tarayıcı devrede değil) — HEIC dosyalarını
+#    klasöre koymadan önce JPG'ye çevirin (Mac'te Önizleme'de
+#    "Farklı Kaydet > JPEG" ya da `sips -s format jpeg dosya.HEIC
+#    --out dosya.jpg` komutuyla). Çevirmeden koyarsanız o ürün
+#    görselsiz eklenir ve loglara uyarı düşer.
+# 3) Bir üründe birden fazla fotoğraf varsa hepsi aynı klasöre
+#    girer; dosya adlarının başına 1-, 2-, 3- gibi sıra numarası
+#    koyarsan galeri sırası ona göre olur (ilk sıradaki = ana
+#    görsel). Numara yoksa alfabetik sıra kullanılır.
+# 4) "kategori:" alanı şu anki kategorilerden biri olmalı:
+#    T-Shirt, Çanta, Pantolon, Takım, Hoodie
+#    (Yeni bir kategori adı yazarsan otomatik oluşturulur.)
+# 5) "aciklama:" ve "kisa_aciklama:" opsiyoneldir, boş bırakılabilir.
+#
+# ÖRNEK (referans için — silebilirsin):
+#
+# klasor: terminal-tisort
+# ad: TERMINAL AA1 OVERSIZE TİŞÖRT
+# fiyat: 750
+# kategori: T-Shirt
+# kisa_aciklama: Terminal Departures ön ve arka baskılı oversize tişört
+# aciklama: %100 pamuk, oversize kalıp. 30 derecede ters çevirerek yıkayın.
+#
+# ============================================================
+
+
+klasor: OnTheRoadWhite
+ad: On The Road T-shirt
+fiyat: 850
+kategori: T-Shirt
+kisa_aciklama: Manifest üzerinden eklenen test ürünü
+aciklama: Bu ürün seed-images klasöründen otomatik yüklendi.
+
+klasor: Coconut
+ad: Coconut T-shirt
+fiyat: 850
+kategori: T-Shirt
+kisa_aciklama: Manifest üzerinden eklenen test ürünü
+aciklama: Bu ürün seed-images klasöründen otomatik yüklendi.
