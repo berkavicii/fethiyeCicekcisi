@@ -195,6 +195,10 @@ namespace KedWear.Infrastructure.Data.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("PantSize")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
@@ -541,6 +545,10 @@ namespace KedWear.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("MannequinMeasurements")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Material")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -645,6 +653,10 @@ namespace KedWear.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("PantSize")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal?>("PriceDifference")
                         .HasPrecision(18, 2)

@@ -21,11 +21,13 @@ public class ProductController : Controller
         int page = 1,
         int? kategori = null,
         string? ara = null,
-        string? sirala = null)
+        string? sirala = null,
+        string? beden = null)
     {
         var (products, totalCount, totalPages) = await _productService.GetPagedProductsAsync(
-            page, 12, kategori, ara, sirala);
+            page, 12, kategori, ara, sirala, beden);
         var categories = await _categoryService.GetActiveCategoriesAsync();
+        var availableSizes = await _productService.GetAvailableSizesAsync();
 
         string? categoryName = null;
         if (kategori.HasValue)
@@ -44,6 +46,8 @@ public class ProductController : Controller
             SelectedCategoryId = kategori,
             SearchTerm = ara,
             SortBy = sirala,
+            SelectedSize = beden,
+            AvailableSizes = availableSizes,
             CategoryName = categoryName
         };
 
@@ -51,14 +55,15 @@ public class ProductController : Controller
     }
 
     [HttpGet("kategori/{slug}")]
-    public async Task<IActionResult> Category(string slug, int page = 1, string? sirala = null)
+    public async Task<IActionResult> Category(string slug, int page = 1, string? sirala = null, string? beden = null)
     {
         var category = await _categoryService.GetCategoryBySlugAsync(slug);
         if (category is null) return NotFound();
 
         var (products, totalCount, totalPages) = await _productService.GetPagedProductsAsync(
-            page, 12, category.Id, null, sirala);
+            page, 12, category.Id, null, sirala, beden);
         var categories = await _categoryService.GetActiveCategoriesAsync();
+        var availableSizes = await _productService.GetAvailableSizesAsync();
 
         var vm = new ProductListViewModel
         {
@@ -69,7 +74,9 @@ public class ProductController : Controller
             TotalCount = totalCount,
             SelectedCategoryId = category.Id,
             CategoryName = category.Name,
-            SortBy = sirala
+            SortBy = sirala,
+            SelectedSize = beden,
+            AvailableSizes = availableSizes
         };
 
         return View("Index", vm);

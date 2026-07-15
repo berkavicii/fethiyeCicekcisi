@@ -37,11 +37,17 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.MainImageUrl).HasMaxLength(500);
         builder.Property(p => p.Material).HasMaxLength(200);
         builder.Property(p => p.CareInstructions).HasMaxLength(500);
+        builder.Property(p => p.MannequinMeasurements).HasMaxLength(200);
 
         builder.HasOne(p => p.Category)
             .WithMany(c => c.Products)
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Soft-deleted ürünler (IsDeleted=true) hiçbir sorguda görünmesin — admin listesi dahil.
+        // Gerçekten kalıcı silinemeyen (sipariş geçmişi olan) ürünler bu sayede admin ekranından
+        // kaybolur; DB'de sadece sipariş bütünlüğü için satırı tutulur.
+        builder.HasQueryFilter(p => !p.IsDeleted);
     }
 }
 
@@ -66,6 +72,7 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
     {
         builder.HasKey(pv => pv.Id);
         builder.Property(pv => pv.Size).HasMaxLength(20);
+        builder.Property(pv => pv.PantSize).HasMaxLength(20);
         builder.Property(pv => pv.Color).HasMaxLength(50);
         builder.Property(pv => pv.ColorCode).HasMaxLength(10);
         builder.Property(pv => pv.SKU).HasMaxLength(50);
@@ -85,6 +92,7 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
         builder.HasKey(ci => ci.Id);
         builder.Property(ci => ci.UnitPrice).HasPrecision(18, 2);
         builder.Property(ci => ci.SessionId).HasMaxLength(100);
+        builder.Property(ci => ci.PantSize).HasMaxLength(20);
 
         builder.HasOne(ci => ci.User)
             .WithMany(u => u.CartItems)

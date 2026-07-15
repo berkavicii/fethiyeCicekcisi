@@ -17,5 +17,6 @@ public class AddToCartViewModel
 {
     public int ProductId { get; set; }
     public int? VariantId { get; set; }
+    public string? PantSize { get; set; }
     public int Quantity { get; set; } = 1;
 }

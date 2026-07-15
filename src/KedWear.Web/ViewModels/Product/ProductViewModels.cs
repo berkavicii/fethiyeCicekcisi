@@ -13,6 +13,8 @@ public class ProductListViewModel
     public string? SearchTerm { get; set; }
     public string? SortBy { get; set; }
     public string? CategoryName { get; set; }
+    public string? SelectedSize { get; set; }
+    public IReadOnlyList<string> AvailableSizes { get; set; } = [];
 }
 
 public class ProductDetailViewModel

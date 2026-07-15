@@ -27,13 +27,17 @@
                         <textarea asp-for="Description" class="form-control" rows="6"></textarea>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label asp-for="Material" class="form-label fw-500" style="font-size:.85rem"></label>
                             <input asp-for="Material" class="form-control" />
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label asp-for="CareInstructions" class="form-label fw-500" style="font-size:.85rem"></label>
                             <input asp-for="CareInstructions" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="MannequinMeasurements" class="form-label fw-500" style="font-size:.85rem"></label>
+                            <input asp-for="MannequinMeasurements" class="form-control" />
                         </div>
                     </div>
                 </div>
@@ -47,12 +51,13 @@
                         <i class="bi bi-plus"></i> Ekle
                     </button>
                 </div>
-                <div class="card-body" id="variantsContainer">
+                <div class="card-body variant-scroll" id="variantsContainer">
                     <div class="row g-2 mb-2 text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
-                        <div class="col-2">Beden</div>
-                        <div class="col-3">Renk</div>
-                        <div class="col-2">Renk Kodu</div>
-                        <div class="col-2">Stok</div>
+                        <div class="col-2" id="sizeColHeader">Beden</div>
+                        <div class="col-2 pant-size-col d-none">Pantolon Bedeni</div>
+                        <div class="col-2">Renk</div>
+                        <div class="col-1">Renk Kodu</div>
+                        <div class="col-1">Stok</div>
                         <div class="col-2">Fiyat Farkı</div>
                         <div class="col-1"></div>
                     </div>
@@ -103,8 +108,12 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label asp-for="CategoryId" class="form-label fw-500" style="font-size:.85rem"></label>
-                        <select asp-for="CategoryId" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))" class="form-select">
+                        <select asp-for="CategoryId" id="categorySelect" class="form-select">
                             <option value="">Kategori Seçin</option>
+                            @foreach (var c in Model.Categories ?? Enumerable.Empty<KedWear.Core.Entities.Category>())
+                            {
+                                <option value="@c.Id" data-slug="@c.Slug">@c.Name</option>
+                            }
                         </select>
                         <span asp-validation-for="CategoryId" class="text-danger" style="font-size:.78rem"></span>
                     </div>
@@ -138,16 +147,29 @@
             const container = document.getElementById('variantsContainer');
             const div = document.createElement('div');
             div.className = 'row g-2 mb-2 variant-row';
+            const pantHidden = !document.querySelector('.pant-size-col') || document.querySelector('.pant-size-col').classList.contains('d-none');
             div.innerHTML = `
                 <div class="col-2"><input name="Variants[${idx}].Size" class="form-control form-control-sm" placeholder="S,M,L..." /></div>
-                <div class="col-3"><input name="Variants[${idx}].Color" class="form-control form-control-sm" placeholder="Siyah..." /></div>
-                <div class="col-2"><input name="Variants[${idx}].ColorCode" class="form-control form-control-sm" placeholder="#000000" /></div>
-                <div class="col-2"><input name="Variants[${idx}].StockQuantity" class="form-control form-control-sm" type="number" value="0" min="0" /></div>
+                <div class="col-2 pant-size-col ${pantHidden ? 'd-none' : ''}"><input name="Variants[${idx}].PantSize" class="form-control form-control-sm" placeholder="S,M,L..." /></div>
+                <div class="col-2"><input name="Variants[${idx}].Color" class="form-control form-control-sm" placeholder="Siyah..." /></div>
+                <div class="col-1"><input name="Variants[${idx}].ColorCode" class="form-control form-control-sm" placeholder="#000000" /></div>
+                <div class="col-1"><input name="Variants[${idx}].StockQuantity" class="form-control form-control-sm" type="number" value="0" min="0" /></div>
                 <div class="col-2"><input name="Variants[${idx}].PriceDifference" class="form-control form-control-sm" type="number" step="0.01" placeholder="0.00" /></div>
                 <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.variant-row').remove()"><i class="bi bi-x"></i></button></div>
             `;
             container.appendChild(div);
         }
+
+        function updateTakimUI() {
+            const sel = document.getElementById('categorySelect');
+            const opt = sel.options[sel.selectedIndex];
+            const isTakim = !!(opt && opt.dataset.slug === 'takim');
+            document.querySelectorAll('.pant-size-col').forEach(el => el.classList.toggle('d-none', !isTakim));
+            const header = document.getElementById('sizeColHeader');
+            if (header) header.textContent = isTakim ? 'Tişört Bedeni' : 'Beden';
+        }
+        document.getElementById('categorySelect')?.addEventListener('change', updateTakimUI);
+        updateTakimUI();
     </script>
     <partial name="_ValidationScriptsPartial" />
 }

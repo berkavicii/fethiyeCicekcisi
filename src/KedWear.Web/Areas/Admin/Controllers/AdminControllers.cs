@@ -36,6 +36,21 @@ public class DashboardController : Controller
         ViewBag.OrderCount = orderCount;
         return View();
     }
+
+    [HttpGet("istatistikler")]
+    public async Task<IActionResult> Stats(string? donem = null)
+    {
+        DateTime? from = donem switch
+        {
+            "30" => DateTime.UtcNow.AddDays(-30),
+            "90" => DateTime.UtcNow.AddDays(-90),
+            "365" => DateTime.UtcNow.AddDays(-365),
+            _ => null
+        };
+
+        var stats = await _orderService.GetProductSalesStatsAsync(from);
+        return View(new AdminStatsViewModel { Stats = stats, Period = from is null ? null : donem });
+    }
 }
 
 [Area("Admin")]
@@ -115,6 +130,7 @@ public class ProductAdminController : Controller
             Status = model.Status,
             Material = model.Material,
             CareInstructions = model.CareInstructions,
+            MannequinMeasurements = model.MannequinMeasurements,
             DisplayOrder = model.DisplayOrder
         };
 
@@ -124,6 +140,7 @@ public class ProductAdminController : Controller
             product.Variants.Add(new ProductVariant
             {
                 Size = v.Size,
+                PantSize = v.PantSize,
                 Color = v.Color,
                 ColorCode = v.ColorCode,
                 StockQuantity = v.StockQuantity,
@@ -214,6 +231,7 @@ public class ProductAdminController : Controller
             Status = product.Status,
             Material = product.Material,
             CareInstructions = product.CareInstructions,
+            MannequinMeasurements = product.MannequinMeasurements,
             DisplayOrder = product.DisplayOrder,
             Categories = categories,
             ExistingImages = product.Images.ToList(),
@@ -221,6 +239,7 @@ public class ProductAdminController : Controller
             {
                 Id = v.Id,
                 Size = v.Size,
+                PantSize = v.PantSize,
                 Color = v.Color,
                 ColorCode = v.ColorCode,
                 StockQuantity = v.StockQuantity,
@@ -260,6 +279,7 @@ public class ProductAdminController : Controller
         product.Status = model.Status;
         product.Material = model.Material;
         product.CareInstructions = model.CareInstructions;
+        product.MannequinMeasurements = model.MannequinMeasurements;
         product.DisplayOrder = model.DisplayOrder;
 
         foreach (var v in model.Variants)
@@ -271,6 +291,7 @@ public class ProductAdminController : Controller
                 {
                     ProductId = product.Id,
                     Size = v.Size,
+                    PantSize = v.PantSize,
                     Color = v.Color,
                     ColorCode = v.ColorCode,
                     StockQuantity = v.StockQuantity,
@@ -291,6 +312,7 @@ public class ProductAdminController : Controller
             }
 
             existing.Size = v.Size;
+            existing.PantSize = v.PantSize;
             existing.Color = v.Color;
             existing.ColorCode = v.ColorCode;
             existing.StockQuantity = v.StockQuantity;
@@ -362,8 +384,19 @@ public class ProductAdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        await _productService.DeleteProductAsync(id);
-        TempData["Success"] = "Ürün silindi.";
+        var result = await _productService.DeleteProductAsync(id);
+        switch (result)
+        {
+            case ProductDeleteResult.HardDeleted:
+                TempData["Success"] = "Ürün tamamen silindi.";
+                break;
+            case ProductDeleteResult.SoftDeleted:
+                TempData["Success"] = "Ürün geçmiş siparişlerde kullanıldığı için kalıcı olarak silinemedi, ancak listeden kaldırıldı.";
+                break;
+            default:
+                TempData["Error"] = "Ürün bulunamadı.";
+                break;
+        }
         return RedirectToAction("Index");
     }
 
@@ -438,7 +471,10 @@ public class CategoryAdminController : Controller
         var category = await _categoryService.GetCategoryByIdAsync(id);
         if (category is null) return NotFound();
 
-        return View(new AdminCategoryViewModel
+        // Ekleme/düzenleme aynı formu (Create.cshtml, Model.Id ile mod ayrımı) kullanır.
+        // Ayrı bir Edit.cshtml'de bu view'i partial olarak render etmek layout'u iki kez
+        // uyguluyordu (partial içinde set edilen Layout da çalışır) — o yüzden direkt bu view.
+        return View("Create", new AdminCategoryViewModel
         {
             Id = category.Id,
             Name = category.Name,
@@ -446,6 +482,7 @@ public class CategoryAdminController : Controller
             ParentId = category.ParentId,
             IsActive = category.IsActive,
             DisplayOrder = category.DisplayOrder,
+            ImageUrl = category.ImageUrl,
             ParentCategories = await _categoryService.GetActiveCategoriesAsync()
         });
     }
@@ -457,7 +494,7 @@ public class CategoryAdminController : Controller
         if (!ModelState.IsValid)
         {
             model.ParentCategories = await _categoryService.GetActiveCategoriesAsync();
-            return View(model);
+            return View("Create", model);
         }
 
         var category = await _categoryService.GetCategoryByIdAsync(id);

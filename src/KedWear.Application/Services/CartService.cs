@@ -30,7 +30,7 @@ public class CartService
     }
 
     public async Task<(bool Success, string Message)> AddToCartAsync(
-        string? userId, string? sessionId, int productId, int? variantId, int quantity = 1)
+        string? userId, string? sessionId, int productId, int? variantId, int quantity = 1, string? pantSize = null)
     {
         var product = await _productRepo.GetWithImagesAndVariantsAsync(productId);
         if (product is null) return (false, "Ürün bulunamadı.");
@@ -51,13 +51,13 @@ public class CartService
         }
         else
         {
-            availableStock = product.Variants.Any()
-                ? product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity)
-                : 0;
-            if (!product.Variants.Any()) availableStock = 99;
+            // Varyantsız ürün = stok tanımlanmamış ürün; satışa kapalıdır (aksi hâlde
+            // stok takibi hiç yapılmadan sınırsız satılırdı). Stok, admin panelinden
+            // ya da seed manifest'indeki bedenler/stok satırıyla varyant olarak girilir.
+            availableStock = product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity);
         }
 
-        var existing = await _cartRepo.GetCartItemAsync(userId, sessionId, productId, variantId);
+        var existing = await _cartRepo.GetCartItemAsync(userId, sessionId, productId, variantId, pantSize);
         var newQty = (existing?.Quantity ?? 0) + quantity;
 
         if (availableStock < newQty)
@@ -76,6 +76,7 @@ public class CartService
                 SessionId = userId == null ? sessionId : null,
                 ProductId = productId,
                 ProductVariantId = variantId,
+                PantSize = pantSize,
                 Quantity = quantity,
                 UnitPrice = unitPrice,
                 CreatedAt = DateTime.UtcNow
@@ -102,6 +103,20 @@ public class CartService
         }
         else
         {
+            // Sepete eklemedeki stok kontrolünün aynısı — bu olmadan müşteri 1 adet
+            // ekleyip sepet sayfasından adedi stokun üzerine çıkarabilirdi.
+            var product = await _productRepo.GetWithImagesAndVariantsAsync(item.ProductId);
+            var availableStock = 0;
+            if (product is not null)
+            {
+                availableStock = item.ProductVariantId.HasValue
+                    ? product.Variants.FirstOrDefault(v => v.Id == item.ProductVariantId.Value && v.IsActive)?.StockQuantity ?? 0
+                    : product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity);
+            }
+
+            if (quantity > availableStock)
+                return (false, $"Stokta yalnızca {availableStock} adet var.");
+
             item.Quantity = quantity;
             _cartRepo.Update(item);
         }

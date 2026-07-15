@@ -129,7 +129,16 @@ public class OrderController : Controller
             await _addressRepo.SaveChangesAsync();
         }
 
-        var order = await _orderService.CreateOrderFromCartAsync(userId, sessionId, shippingAddress, model.Notes);
+        Order order;
+        try
+        {
+            order = await _orderService.CreateOrderFromCartAsync(userId, sessionId, shippingAddress, model.Notes);
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction("Index", "Cart");
+        }
         order.ShippingEmail = model.Email;
 
         // Get user IP
@@ -142,6 +151,21 @@ public class OrderController : Controller
             i.UnitPrice.ToString("F2"),
             i.Quantity.ToString()
         }).ToList();
+
+        if (_config.GetValue<bool>("PayTR:TestMode"))
+        {
+            var testPayment = new Payment
+            {
+                OrderId = order.Id,
+                PayTRMerchantOid = order.OrderNumber,
+                Amount = order.TotalAmount,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _paymentRepo.AddAsync(testPayment);
+            await _paymentRepo.SaveChangesAsync();
+
+            return View("SimulatedPayment", new OrderSummaryViewModel { Order = order });
+        }
 
         var (success, iframeToken, errorMsg) = await _payTRService.GetIframeTokenAsync(
             order.OrderNumber,
@@ -174,6 +198,33 @@ public class OrderController : Controller
             Order = order,
             PayTRIframeToken = iframeToken
         });
+    }
+
+    [HttpPost("test-odeme-sonucu")]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SimulatePaymentResult(string orderNumber, bool approve)
+    {
+        if (!_config.GetValue<bool>("PayTR:TestMode"))
+            return NotFound();
+
+        var order = await _orderService.GetOrderByNumberAsync(orderNumber);
+        if (order is null) return NotFound();
+
+        var userId = GetUserId();
+        if (order.UserId != userId && !User.IsInRole("Admin"))
+            return Forbid();
+
+        await _orderService.HandlePaymentCallbackAsync(
+            orderNumber,
+            approve,
+            approve ? $"TEST-{Guid.NewGuid():N}".Substring(0, 20) : null,
+            approve ? null : "Test modu: ödeme reddedildi (simülasyon)",
+            "Simüle edilmiş yerel test ödemesi, PayTR'ye istek gönderilmedi.");
+
+        return approve
+            ? RedirectToAction("Success", new { siparis = orderNumber })
+            : RedirectToAction("Fail", new { siparis = orderNumber });
     }
 
     [HttpPost("callback")]
@@ -235,6 +286,6 @@ public class OrderController : Controller
         if (order.UserId != userId && !User.IsInRole("Admin"))
             return Forbid();
 
-        return View(new OrderDetailViewModel { Order = order });
+        return View(order);
     }
 }

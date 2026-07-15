@@ -18,6 +18,7 @@ public class Product : BaseEntity
     public int DisplayOrder { get; set; } = 0;
     public string? Material { get; set; }
     public string? CareInstructions { get; set; }
+    public string? MannequinMeasurements { get; set; }
 
     public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();

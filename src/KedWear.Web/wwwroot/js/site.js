@@ -7,8 +7,14 @@ async function updateCartBadge() {
         const data = await res.json();
         const count = data.count || 0;
         document.querySelectorAll('#cartBadgeMobile, #cartBadgeDesktop').forEach(el => {
+            const changed = el.textContent !== String(count);
             el.textContent = count;
             el.style.display = count > 0 ? 'flex' : 'none';
+            if (changed && count > 0) {
+                el.classList.remove('pop');
+                void el.offsetWidth; // restart the animation
+                el.classList.add('pop');
+            }
         });
     } catch (e) {}
 }
@@ -17,8 +23,9 @@ function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const id = 'toast-' + Date.now();
-    const bgClass = type === 'success' ? 'bg-dark' : 'bg-danger';
-    container.insertAdjacentHTML('beforeend', `<div id="${id}" class="toast align-items-center text-white ${bgClass} border-0" role="alert"><div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`);
+    const typeClass = type === 'success' ? '' : 'kw-toast-error';
+    const icon = type === 'success' ? 'bi-check2' : 'bi-exclamation-circle';
+    container.insertAdjacentHTML('beforeend', `<div id="${id}" class="toast align-items-center kw-toast ${typeClass} border-0" role="alert"><div class="d-flex"><div class="toast-body"><i class="bi ${icon}"></i>${message}</div><button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`);
     const toastEl = document.getElementById(id);
     const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
     toast.show();
@@ -31,29 +38,55 @@ document.addEventListener('click', async function (e) {
     e.preventDefault();
     const productId = btn.dataset.productId;
     const variantId = btn.dataset.variantId || null;
+    const pantSize = btn.dataset.pantSize || null;
+    const sizeLabel = btn.dataset.sizeLabel || '';
     const quantity = parseInt(btn.dataset.quantity || '1');
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-    const origText = btn.textContent;
+    const origHtml = btn.innerHTML;
     try {
         btn.disabled = true;
         btn.textContent = 'Ekleniyor...';
         const res = await fetch('/sepet/ekle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token || '' },
-            body: JSON.stringify({ productId: parseInt(productId), variantId: variantId ? parseInt(variantId) : null, quantity })
+            body: JSON.stringify({ productId: parseInt(productId), variantId: variantId ? parseInt(variantId) : null, pantSize, quantity })
         });
         const data = await res.json();
-        if (data.success) { showToast(data.message || 'Ürün sepete eklendi.', 'success'); updateCartBadge(); }
-        else showToast(data.message || 'Bir hata oluştu.', 'error');
+        if (data.success) {
+            updateCartBadge();
+            // Quiet confirmation on the button itself before restoring it — includes which
+            // size(s) were actually added so the customer isn't left guessing.
+            btn.classList.add('is-added');
+            btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Sepete Eklendi' + (sizeLabel ? ` (${sizeLabel})` : '');
+            if (sizeLabel) showToast(`Sepete eklendi — ${sizeLabel}`, 'success');
+            setTimeout(() => {
+                btn.classList.remove('is-added');
+                btn.innerHTML = origHtml;
+                btn.disabled = false;
+            }, 2200);
+            return;
+        }
+        showToast(data.message || 'Bir hata oluştu.', 'error');
     } catch (err) { showToast('Bağlantı hatası.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = origText; }
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
 });
+
 
 document.addEventListener('click', function (e) {
     const thumb = e.target.closest('.product-thumb');
     if (!thumb) return;
     const mainImg = document.getElementById('mainProductImage');
-    if (mainImg) mainImg.src = thumb.src;
+    if (mainImg && mainImg.src !== thumb.src) {
+        // Gentle crossfade: fade out, swap when the new image is ready, fade in
+        mainImg.classList.add('is-swapping');
+        const next = new Image();
+        next.onload = next.onerror = () => {
+            mainImg.src = thumb.src;
+            requestAnimationFrame(() => mainImg.classList.remove('is-swapping'));
+        };
+        next.src = thumb.src;
+    }
     document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
 });

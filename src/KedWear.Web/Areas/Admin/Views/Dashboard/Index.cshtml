@@ -30,6 +30,7 @@
                 <a href="/admin/siparisler" style="font-size:.8rem">Tümü →</a>
             </div>
             <div class="card-body p-0">
+                <div class="table-responsive">
                 <table class="table table-hover mb-0" style="font-size:.85rem">
                     <thead>
                         <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em">
@@ -49,12 +50,13 @@
                                 <td class="py-2 text-muted">@order.CreatedAt.ToString("dd.MM.yy")</td>
                                 <td class="py-2">@order.TotalAmount.ToString("N2") ₺</td>
                                 <td class="py-2">
-                                    <span class="status-badge status-@order.Status.ToString().ToLower()">@order.Status</span>
+                                    <span class="status-badge status-@order.Status.ToString().ToLower()">@order.Status.ToDisplayName()</span>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>

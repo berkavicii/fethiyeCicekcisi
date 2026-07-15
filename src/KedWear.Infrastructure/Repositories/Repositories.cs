@@ -34,7 +34,8 @@ public class ProductRepository : Repository<Product>, IProductRepository
         int page, int pageSize,
         int? categoryId = null,
         string? searchTerm = null,
-        string? sortBy = null)
+        string? sortBy = null,
+        string? size = null)
     {
         var query = _dbSet.Include(p => p.Category).Include(p => p.Images)
             .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
@@ -43,8 +44,24 @@ public class ProductRepository : Repository<Product>, IProductRepository
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
 
+        if (!string.IsNullOrWhiteSpace(size))
+        {
+            // Bedenler admin panelinde serbest metin girildiği için ("L" / "l") harf
+            // duyarsız karşılaştırılır. Stoğu bitmiş beden "var" sayılmaz.
+            var sizeLower = size.Trim().ToLower();
+            query = query.Where(p => p.Variants.Any(v =>
+                v.IsActive && !v.IsDeleted && v.StockQuantity > 0 &&
+                v.Size != null && v.Size.Trim().ToLower() == sizeLower));
+        }
+
         if (!string.IsNullOrWhiteSpace(searchTerm))
-            query = query.Where(p => p.Name.Contains(searchTerm) || (p.Description != null && p.Description.Contains(searchTerm)));
+        {
+            // Postgres'te LIKE (EF'in Contains çevirisi) harf duyarlıdır — "coco" yazan
+            // müşteri "Coconut"u bulamazdı. ILIKE ile harf duyarsız arama yapılır.
+            var pattern = $"%{searchTerm}%";
+            query = query.Where(p => EF.Functions.ILike(p.Name, pattern) ||
+                                     (p.Description != null && EF.Functions.ILike(p.Description, pattern)));
+        }
 
         query = sortBy switch
         {
@@ -58,6 +75,15 @@ public class ProductRepository : Repository<Product>, IProductRepository
         var products = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return (products, totalCount);
     }
+
+    public async Task<IEnumerable<string>> GetAvailableSizesAsync() =>
+        await _context.Set<ProductVariant>()
+            .Where(v => v.IsActive && !v.IsDeleted && v.StockQuantity > 0 &&
+                        v.Size != null && v.Size != "" &&
+                        !v.Product.IsDeleted && v.Product.Status == Core.Enums.ProductStatus.Active)
+            .Select(v => v.Size!)
+            .Distinct()
+            .ToListAsync();
 
     public async Task<Product?> GetWithImagesAndVariantsAsync(int id) =>
         await _dbSet.Include(p => p.Category)
@@ -84,6 +110,13 @@ public class ProductRepository : Repository<Product>, IProductRepository
 
     public void RemoveImage(ProductImage image) =>
         _context.Set<ProductImage>().Remove(image);
+
+    public async Task<bool> HasOrderItemsAsync(int productId) =>
+        await _context.Set<OrderItem>().AnyAsync(oi => oi.ProductId == productId);
+
+    public async Task<bool> SlugExistsAsync(string slug, int? excludeId = null) =>
+        await _dbSet.IgnoreQueryFilters()
+                    .AnyAsync(p => p.Slug == slug && (!excludeId.HasValue || p.Id != excludeId.Value));
 }
 
 public class CategoryRepository : Repository<Category>, ICategoryRepository
@@ -94,7 +127,7 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
         await _dbSet.Include(c => c.Products).FirstOrDefaultAsync(c => c.Slug == slug);
 
     public async Task<IEnumerable<Category>> GetActiveAsync() =>
-        await _dbSet.Where(c => c.IsActive)
+        await _dbSet.Where(c => c.IsActive && !c.IsDeleted)
                     .OrderBy(c => c.DisplayOrder)
                     .ToListAsync();
 
@@ -115,11 +148,12 @@ public class CartRepository : Repository<CartItem>, ICartRepository
                          (userId == null && ci.SessionId == sessionId))
             .ToListAsync();
 
-    public async Task<CartItem?> GetCartItemAsync(string? userId, string? sessionId, int productId, int? variantId) =>
+    public async Task<CartItem?> GetCartItemAsync(string? userId, string? sessionId, int productId, int? variantId, string? pantSize = null) =>
         await _dbSet.FirstOrDefaultAsync(ci =>
             ((userId != null && ci.UserId == userId) || (userId == null && ci.SessionId == sessionId)) &&
             ci.ProductId == productId &&
-            ci.ProductVariantId == variantId);
+            ci.ProductVariantId == variantId &&
+            ci.PantSize == pantSize);
 
     public async Task ClearCartAsync(string? userId, string? sessionId)
     {
@@ -134,7 +168,7 @@ public class CartRepository : Repository<CartItem>, ICartRepository
         foreach (var item in guestItems)
         {
             var existing = await _dbSet.FirstOrDefaultAsync(ci =>
-                ci.UserId == userId && ci.ProductId == item.ProductId && ci.ProductVariantId == item.ProductVariantId);
+                ci.UserId == userId && ci.ProductId == item.ProductId && ci.ProductVariantId == item.ProductVariantId && ci.PantSize == item.PantSize);
 
             if (existing != null)
                 existing.Quantity += item.Quantity;
@@ -187,6 +221,67 @@ public class OrderRepository : Repository<Order>, IOrderRepository
                                 .ToListAsync();
         return (orders, total);
     }
+
+    public async Task<IReadOnlyList<Core.Models.ProductSalesStat>> GetProductSalesStatsAsync(DateTime? from = null)
+    {
+        // Satış: ödemesi alınmış ve iptale/iadeye dönmemiş siparişler. İade ayrı sayılır ki
+        // "kaç sattım" ile "kaç geri geldi" yan yana izlenebilsin. Ödemesi hiç tamamlanmayan
+        // (Pending/PaymentPending/PaymentFailed) ve iptal edilen siparişler istatistiğe girmez.
+        var saleStatuses = new[]
+        {
+            Core.Enums.OrderStatus.PaymentSuccess,
+            Core.Enums.OrderStatus.Processing,
+            Core.Enums.OrderStatus.Shipped,
+            Core.Enums.OrderStatus.Delivered
+        };
+
+        // IgnoreQueryFilters: soft-delete edilmiş ürünün satırları da rapora girmeli;
+        // Product'taki query filter inner join'de o satırları sessizce düşürürdü.
+        var rows = await _context.Set<OrderItem>()
+            .IgnoreQueryFilters()
+            .Where(oi => saleStatuses.Contains(oi.Order.Status) || oi.Order.Status == Core.Enums.OrderStatus.Refunded)
+            .Where(oi => !from.HasValue || oi.Order.CreatedAt >= from.Value)
+            .Select(oi => new
+            {
+                oi.ProductId,
+                oi.ProductName,
+                oi.ProductImageUrl,
+                oi.Quantity,
+                oi.TotalPrice,
+                oi.OrderId,
+                oi.Order.Status,
+                CategoryName = (string?)oi.Product.Category.Name,
+                oi.Product.Slug,
+                ProductDeleted = oi.Product.IsDeleted
+            })
+            .ToListAsync();
+
+        // Butik ölçeğinde satır sayısı küçük; gruplamayı bellekte yapmak hem yeterli hem de
+        // koşullu COUNT(DISTINCT) çevirisi gibi sağlayıcı kısıtlarından bağımsız.
+        return rows
+            .GroupBy(r => r.ProductId)
+            .Select(g =>
+            {
+                var sales = g.Where(r => r.Status != Core.Enums.OrderStatus.Refunded).ToList();
+                var refunds = g.Where(r => r.Status == Core.Enums.OrderStatus.Refunded).ToList();
+                var last = g.OrderByDescending(r => r.OrderId).First();
+                return new Core.Models.ProductSalesStat
+                {
+                    ProductId = g.Key,
+                    ProductName = last.ProductName,
+                    ImageUrl = last.ProductImageUrl,
+                    CategoryName = last.CategoryName,
+                    Slug = last.Slug,
+                    ProductDeleted = last.ProductDeleted,
+                    UnitsSold = sales.Sum(r => r.Quantity),
+                    Revenue = sales.Sum(r => r.TotalPrice),
+                    UnitsRefunded = refunds.Sum(r => r.Quantity)
+                };
+            })
+            .OrderByDescending(s => s.UnitsSold)
+            .ThenByDescending(s => s.Revenue)
+            .ToList();
+    }
 }
 
 public class AddressRepository : Repository<Address>, IAddressRepository
@@ -209,5 +304,6 @@ public class PaymentRepository : Repository<Payment>, IPaymentRepository
 
     public async Task<Payment?> GetByMerchantOidAsync(string merchantOid) =>
         await _dbSet.Include(p => p.Order).ThenInclude(o => o.Items)
+                    .ThenInclude(i => i.ProductVariant)
                     .FirstOrDefaultAsync(p => p.PayTRMerchantOid == merchantOid);
 }

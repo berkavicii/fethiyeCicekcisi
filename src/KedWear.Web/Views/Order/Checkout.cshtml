@@ -97,9 +97,9 @@
                                  onerror="this.src='/images/products/placeholder.jpg'" />
                             <div class="flex-grow-1">
                                 <div style="font-size:.85rem;font-weight:500">@item.Product?.Name</div>
-                                @if (item.ProductVariant != null)
+                                @if (item.ProductVariant != null || !string.IsNullOrEmpty(item.PantSize))
                                 {
-                                    <small class="text-muted">@item.ProductVariant.Size @item.ProductVariant.Color</small>
+                                    <small class="text-muted">@item.ProductVariant?.Size @(item.PantSize ?? item.ProductVariant?.PantSize) @item.ProductVariant?.Color</small>
                                 }
                                 <div class="d-flex justify-content-between mt-1">
                                     <small class="text-muted">× @item.Quantity</small>

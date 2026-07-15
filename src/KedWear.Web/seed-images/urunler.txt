@@ -23,6 +23,16 @@
 #    T-Shirt, Çanta, Pantolon, Takım, Hoodie
 #    (Yeni bir kategori adı yazarsan otomatik oluşturulur.)
 # 5) "aciklama:" ve "kisa_aciklama:" opsiyoneldir, boş bırakılabilir.
+# 6) STOK — iki yoldan biriyle verilir (verilmezse ürün stoksuz
+#    eklenir ve sitede "Tükendi" görünür, satın alınamaz):
+#      bedenler: S=10, M=15, L=12, XL=8
+#        → beden başına stok. 0 yazarsan o beden sitede görünür ama
+#          üstü çizili/seçilemez olur (ör. L=0).
+#      stok: 8
+#        → bedensiz ürünler için (çanta gibi) toplam stok.
+#    Ürün siteye bir kez eklendikten sonra stok admin panelinden
+#    yönetilir; buradaki sayıyı sonradan değiştirmek mevcut ürünü
+#    ETKİLEMEZ (yanlışlıkla canlı stokun ezilmemesi için).
 #
 # ÖRNEK (referans için — silebilirsin):
 #
@@ -30,6 +40,7 @@
 # ad: TERMINAL AA1 OVERSIZE TİŞÖRT
 # fiyat: 750
 # kategori: T-Shirt
+# bedenler: S=10, M=15, L=12, XL=8
 # kisa_aciklama: Terminal Departures ön ve arka baskılı oversize tişört
 # aciklama: %100 pamuk, oversize kalıp. 30 derecede ters çevirerek yıkayın.
 #
@@ -40,6 +51,7 @@ klasor: OnTheRoadWhite
 ad: On The Road T-shirt
 fiyat: 850
 kategori: T-Shirt
+bedenler: S=10, M=10, L=10, XL=10
 kisa_aciklama: Manifest üzerinden eklenen test ürünü
 aciklama: Bu ürün seed-images klasöründen otomatik yüklendi.
 
@@ -47,5 +59,6 @@ klasor: Coconut
 ad: Coconut T-shirt
 fiyat: 850
 kategori: T-Shirt
+bedenler: S=10, M=10, L=10, XL=10
 kisa_aciklama: Manifest üzerinden eklenen test ürünü
 aciklama: Bu ürün seed-images klasöründen otomatik yüklendi.

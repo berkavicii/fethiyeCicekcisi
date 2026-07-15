@@ -19,11 +19,32 @@ public class ProductService
     }
 
     public async Task<(IEnumerable<Product> Products, int TotalCount, int TotalPages)> GetPagedProductsAsync(
-        int page = 1, int pageSize = 12, int? categoryId = null, string? searchTerm = null, string? sortBy = null)
+        int page = 1, int pageSize = 12, int? categoryId = null, string? searchTerm = null, string? sortBy = null,
+        string? size = null)
     {
-        var (products, totalCount) = await _productRepo.GetPagedAsync(page, pageSize, categoryId, searchTerm, sortBy);
+        var (products, totalCount) = await _productRepo.GetPagedAsync(page, pageSize, categoryId, searchTerm, sortBy, size);
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
         return (products, totalCount, totalPages);
+    }
+
+    // Standart bedenler bu sırayla, liste dışı kalanlar (ör. "36", "Tek Ebat") alfabetik olarak sona.
+    private static readonly string[] StandardSizeOrder = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+
+    public async Task<IReadOnlyList<string>> GetAvailableSizesAsync()
+    {
+        var sizes = await _productRepo.GetAvailableSizesAsync();
+        // Serbest metin girildiği için "L" / "l " gibi varyasyonlar tek bedende toplanır.
+        return sizes
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(s =>
+            {
+                var idx = Array.IndexOf(StandardSizeOrder, s.Trim().ToUpperInvariant());
+                return idx == -1 ? int.MaxValue : idx;
+            })
+            .ThenBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public Task<Product?> GetProductBySlugAsync(string slug) =>
@@ -58,18 +79,32 @@ public class ProductService
         await _productRepo.SaveChangesAsync();
     }
 
-    public async Task DeleteProductAsync(int id)
+    /// <summary>Deletes a product and its R2 images. A product that has never been ordered is
+    /// removed outright (row + images gone, disappears from every screen). A product that
+    /// appears in past orders can't be hard-deleted — FK_OrderItems_Products cascades on
+    /// delete, which would silently wipe those orders' line items — so it falls back to the
+    /// existing soft-delete flag instead (still hidden everywhere thanks to the query filter
+    /// on Product, but the DB row and order history survive).</summary>
+    public async Task<ProductDeleteResult> DeleteProductAsync(int id)
     {
         var product = await _productRepo.GetWithImagesAndVariantsAsync(id);
-        if (product is null) return;
+        if (product is null) return ProductDeleteResult.NotFound;
 
         foreach (var image in product.Images)
             await _fileService.DeleteImageAsync(image.ImageUrl);
 
-        product.IsDeleted = true;
-        product.UpdatedAt = DateTime.UtcNow;
-        _productRepo.Update(product);
+        if (await _productRepo.HasOrderItemsAsync(id))
+        {
+            product.IsDeleted = true;
+            product.UpdatedAt = DateTime.UtcNow;
+            _productRepo.Update(product);
+            await _productRepo.SaveChangesAsync();
+            return ProductDeleteResult.SoftDeleted;
+        }
+
+        _productRepo.Remove(product);
         await _productRepo.SaveChangesAsync();
+        return ProductDeleteResult.HardDeleted;
     }
 
     /// <summary>Removes a single product image: deletes the DB row, its physical file, and
@@ -140,7 +175,10 @@ public class CategoryService
 
     public Task<Category?> GetCategoryBySlugAsync(string slug) => _categoryRepo.GetBySlugAsync(slug);
 
-    public async Task<IEnumerable<Category>> GetAllCategoriesAsync() => await _categoryRepo.GetAllAsync();
+    // Category'de Product'taki gibi global query filter yok; silme IsDeleted bayrağıyla
+    // yapıldığından burada elle süzülmezse silinen kategoriler admin listesinde kalır.
+    public async Task<IEnumerable<Category>> GetAllCategoriesAsync() =>
+        (await _categoryRepo.FindAsync(c => !c.IsDeleted)).OrderBy(c => c.DisplayOrder);
 
     public async Task CreateCategoryAsync(Category category)
     {

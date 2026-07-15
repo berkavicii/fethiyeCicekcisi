@@ -58,8 +58,3 @@ public class OrderSummaryViewModel
     public Core.Entities.Order Order { get; set; } = null!;
     public string? PayTRIframeToken { get; set; }
 }
-
-public class OrderDetailViewModel
-{
-    public Core.Entities.Order Order { get; set; } = null!;
-}

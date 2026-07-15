@@ -4,45 +4,77 @@
 }
 
 <div class="container py-5">
-    <div class="row mb-4 align-items-center reveal">
+    <div class="row mb-5 align-items-end reveal">
         <div class="col">
-            <h1 class="section-title mb-1">@(Model.CategoryName ?? "Tüm Ürünler")</h1>
-            <p class="text-muted mb-0" style="font-size:.85rem">@Model.TotalCount ürün bulundu</p>
+            <p class="section-tag mb-2">Koleksiyon</p>
+            <h1 class="section-title mb-2">@(Model.CategoryName ?? "Tüm Ürünler")</h1>
+            <p class="text-muted mb-0" style="font-size:.85rem;font-style:italic;font-family:var(--font-serif)">@Model.TotalCount parça</p>
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 g-lg-5">
         <!-- Sidebar Filters -->
         <div class="col-md-3">
             <form method="get" asp-controller="Product" asp-action="Index">
+                @* Arama/sıralama form submit'i seçili kategori ve bedeni kaybetmesin *@
+                @if (Model.SelectedCategoryId.HasValue)
+                {
+                    <input type="hidden" name="kategori" value="@Model.SelectedCategoryId" />
+                }
+                @if (!string.IsNullOrEmpty(Model.SelectedSize))
+                {
+                    <input type="hidden" name="beden" value="@Model.SelectedSize" />
+                }
                 <!-- Search -->
-                <div class="mb-4">
+                <div class="filter-block">
                     <label class="section-tag">Ara</label>
-                    <input type="text" name="ara" value="@Model.SearchTerm" class="form-control form-control-kw" placeholder="Ürün ara...">
+                    <input type="text" name="ara" value="@Model.SearchTerm" class="form-control form-control-kw mt-2" placeholder="Ürün ara...">
                 </div>
 
                 <!-- Categories -->
-                <div class="mb-4">
+                <div class="filter-block">
                     <label class="section-tag">Kategori</label>
-                    <div class="d-flex flex-column gap-2 mt-2">
+                    <div class="d-flex flex-column gap-2 mt-3">
                         <a asp-controller="Product" asp-action="Index"
-                           class="d-flex justify-content-between @(Model.SelectedCategoryId == null ? "fw-600" : "")"
-                           style="font-size:.85rem">
+                           class="filter-link @(Model.SelectedCategoryId == null ? "active" : "")">
                             Tümü
                         </a>
                         @foreach (var cat in Model.Categories)
                         {
                             <a asp-controller="Product" asp-action="Index" asp-route-kategori="@cat.Id"
-                               class="d-flex justify-content-between @(Model.SelectedCategoryId == cat.Id ? "fw-600" : "")"
-                               style="font-size:.85rem">
+                               asp-route-beden="@Model.SelectedSize"
+                               class="filter-link @(Model.SelectedCategoryId == cat.Id ? "active" : "")">
                                 @cat.Name
                             </a>
                         }
                     </div>
                 </div>
 
+                <!-- Sizes -->
+                @if (Model.AvailableSizes.Any())
+                {
+                    <div class="filter-block">
+                        <label class="section-tag">Beden</label>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            @foreach (var size in Model.AvailableSizes)
+                            {
+                                var isSelected = string.Equals(Model.SelectedSize, size, StringComparison.OrdinalIgnoreCase);
+                                <a asp-controller="Product" asp-action="Index"
+                                   asp-route-kategori="@Model.SelectedCategoryId"
+                                   asp-route-ara="@Model.SearchTerm"
+                                   asp-route-sirala="@Model.SortBy"
+                                   asp-route-beden="@(isSelected ? null : size)"
+                                   class="variant-btn @(isSelected ? "active" : "")"
+                                   style="padding:.4rem .85rem;font-size:.74rem;text-decoration:none">
+                                    @size
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
                 <!-- Sort -->
-                <div class="mb-4">
+                <div class="filter-block">
                     <label class="section-tag">Sırala</label>
                     <select name="sirala" class="form-select form-control-kw mt-2" onchange="this.form.submit()">
                         <option value="">Varsayılan</option>
@@ -51,9 +83,9 @@
                         <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Fiyat (Yüksek-Düşük)</option>
                     </select>
                 </div>
-                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.SelectedCategoryId.HasValue)
+                @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.SelectedCategoryId.HasValue || !string.IsNullOrEmpty(Model.SelectedSize))
                 {
-                    <a asp-controller="Product" asp-action="Index" class="text-muted" style="font-size:.8rem">Filtreleri Temizle ×</a>
+                    <a asp-controller="Product" asp-action="Index" class="link-quiet" style="font-size:.68rem">Filtreleri Temizle ×</a>
                 }
             </form>
         </div>
@@ -125,7 +157,8 @@
                                        asp-route-page="@i"
                                        asp-route-kategori="@Model.SelectedCategoryId"
                                        asp-route-ara="@Model.SearchTerm"
-                                       asp-route-sirala="@Model.SortBy">@i</a>
+                                       asp-route-sirala="@Model.SortBy"
+                                       asp-route-beden="@Model.SelectedSize">@i</a>
                                 </li>
                             }
                         </ul>

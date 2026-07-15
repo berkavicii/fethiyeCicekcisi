@@ -48,6 +48,9 @@ public class OrderService
         return (orders, total, (int)Math.Ceiling(total / (double)pageSize));
     }
 
+    public Task<IReadOnlyList<Core.Models.ProductSalesStat>> GetProductSalesStatsAsync(DateTime? from = null) =>
+        _orderRepo.GetProductSalesStatsAsync(from);
+
     public async Task<Order> CreateOrderFromCartAsync(
         string? userId, string? sessionId, Address shippingAddress, string? notes = null)
     {
@@ -64,12 +67,32 @@ public class OrderService
             if (product is null) continue;
 
             string? variantInfo = null;
-            if (item.ProductVariant != null)
+            if (item.ProductVariant != null || !string.IsNullOrEmpty(item.PantSize))
             {
                 var parts = new List<string>();
-                if (!string.IsNullOrEmpty(item.ProductVariant.Size)) parts.Add($"Beden: {item.ProductVariant.Size}");
-                if (!string.IsNullOrEmpty(item.ProductVariant.Color)) parts.Add($"Renk: {item.ProductVariant.Color}");
+                if (!string.IsNullOrEmpty(item.ProductVariant?.Size)) parts.Add($"Beden: {item.ProductVariant.Size}");
+                // Sepette pantolon bedeni, tam varyant kombinasyonu (Beden+Pantolon) tek bir
+                // stok satırı olarak girilmemiş olsa bile korunsun diye CartItem üzerinde
+                // ayrıca metin olarak tutulur — varyantın kendi PantSize'ı yedek olarak kullanılır.
+                var pantSize = item.PantSize ?? item.ProductVariant?.PantSize;
+                if (!string.IsNullOrEmpty(pantSize)) parts.Add($"Pantolon Bedeni: {pantSize}");
+                if (!string.IsNullOrEmpty(item.ProductVariant?.Color)) parts.Add($"Renk: {item.ProductVariant.Color}");
                 variantInfo = string.Join(", ", parts);
+            }
+
+            // Sepete eklendikten sonra stok değişmiş olabilir (başka bir müşteri son
+            // adedi almış olabilir) — ödemeye geçilmeden burada son bir kez doğrulanır.
+            if (item.ProductVariantId.HasValue)
+            {
+                var variant = product.Variants.FirstOrDefault(v => v.Id == item.ProductVariantId.Value);
+                var stock = variant is { IsActive: true } ? variant.StockQuantity : 0;
+                if (stock < item.Quantity)
+                {
+                    var label = string.IsNullOrEmpty(variantInfo) ? product.Name : $"{product.Name} ({variantInfo})";
+                    throw new InvalidOperationException(stock == 0
+                        ? $"'{label}' tükendi. Lütfen sepetinizden çıkarın."
+                        : $"'{label}' için stokta yalnızca {stock} adet kaldı. Lütfen sepetinizdeki adedi güncelleyin.");
+                }
             }
 
             var lineTotal = item.UnitPrice * item.Quantity;
@@ -147,6 +170,18 @@ public class OrderService
 
         payment.Order.Status = isSuccess ? OrderStatus.Processing : OrderStatus.PaymentFailed;
         payment.Order.UpdatedAt = DateTime.UtcNow;
+
+        // Stok, sipariş oluşturulduğunda değil ödeme kesinleştiğinde düşülür — ödemesi
+        // tamamlanmayan (iframe'i kapatan) siparişler stok kilitlememeli. Math.Max ile
+        // sıfırın altına inmesi engellenir (aynı son ürüne eşzamanlı iki ödeme gelirse).
+        if (isSuccess)
+        {
+            foreach (var item in payment.Order.Items)
+            {
+                if (item.ProductVariant is not null)
+                    item.ProductVariant.StockQuantity = Math.Max(0, item.ProductVariant.StockQuantity - item.Quantity);
+            }
+        }
 
         _paymentRepo.Update(payment);
         await _paymentRepo.SaveChangesAsync();

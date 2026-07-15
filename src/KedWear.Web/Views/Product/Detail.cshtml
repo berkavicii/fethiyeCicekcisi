@@ -2,12 +2,16 @@
 @{
     ViewData["Title"] = Model.Product.Name;
     var product = Model.Product;
+    var isTakim = product.Category?.Slug == "takim";
     var sizes = product.Variants.Where(v => v.IsActive && !string.IsNullOrEmpty(v.Size))
                                  .Select(v => v.Size).Distinct().ToList();
+    var pantSizes = product.Variants.Where(v => v.IsActive && !string.IsNullOrEmpty(v.PantSize))
+                                     .Select(v => v.PantSize).Distinct().ToList();
     var colors = product.Variants.Where(v => v.IsActive && !string.IsNullOrEmpty(v.Color))
                                   .GroupBy(v => v.Color).Select(g => g.First()).ToList();
     var images = product.Images.OrderBy(i => i.DisplayOrder).ToList();
     var mainImage = images.FirstOrDefault(i => i.IsMain) ?? images.FirstOrDefault();
+    var isPurchasable = product.Variants.Any(v => v.IsActive && v.StockQuantity > 0);
 }
 
 @Html.AntiForgeryToken()
@@ -52,9 +56,10 @@
 
         <!-- Product Info -->
         <div class="col-lg-6 reveal" style="transition-delay:.1s">
+            <div class="product-info-sticky">
             @if (product.Category != null)
             {
-                <p class="text-muted mb-2" style="font-size:.8rem;letter-spacing:.1em;text-transform:uppercase">@product.Category.Name</p>
+                <p class="text-muted mb-2" style="font-size:.72rem;letter-spacing:.22em;text-transform:uppercase">@product.Category.Name</p>
             }
 
             <h1 class="product-detail-name mb-3">@product.Name</h1>
@@ -96,16 +101,72 @@
             }
 
             <!-- Size Selection -->
-            @if (sizes.Any())
+            @if (isTakim)
+            {
+                <div class="mb-4">
+                    <div class="size-select-row">
+                        @if (sizes.Any())
+                        {
+                            <button type="button" class="size-select-toggle" data-size-toggle="top">
+                                <span data-size-toggle-label="top">Beden Ölçüleri</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        }
+                        @if (pantSizes.Any())
+                        {
+                            <button type="button" class="size-select-toggle" data-size-toggle="pant">
+                                <span data-size-toggle-label="pant">Pantolon Beden Ölçüleri</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        }
+                    </div>
+                    @if (sizes.Any())
+                    {
+                        <div class="size-select-panel" data-size-panel="top" style="display:none">
+                            <p class="size-select-panel-title">Beden Ölçüleri</p>
+                            @foreach (var size in sizes)
+                            {
+                                <label class="size-option-row">
+                                    <span>@size</span>
+                                    <input type="radio" name="sizeRadioTop" data-size-group="top" data-size-value="@size" hidden />
+                                    <span class="size-option-circle"></span>
+                                </label>
+                            }
+                            <button type="button" class="size-select-clear" data-clear-group="top">Seçimi kaldır</button>
+                        </div>
+                    }
+                    @if (pantSizes.Any())
+                    {
+                        <div class="size-select-panel" data-size-panel="pant" style="display:none">
+                            <p class="size-select-panel-title">Pantolon Beden Ölçüleri</p>
+                            @foreach (var pantSize in pantSizes)
+                            {
+                                <label class="size-option-row">
+                                    <span>@pantSize</span>
+                                    <input type="radio" name="sizeRadioPant" data-size-group="pant" data-size-value="@pantSize" hidden />
+                                    <span class="size-option-circle"></span>
+                                </label>
+                            }
+                            <button type="button" class="size-select-clear" data-clear-group="pant">Seçimi kaldır</button>
+                        </div>
+                    }
+                    <script id="takimVariantData" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(product.Variants.Where(v => v.IsActive).Select(v => new { id = v.Id, size = v.Size, pantSize = v.PantSize, stock = v.StockQuantity })))</script>
+                </div>
+            }
+            else if (sizes.Any())
             {
                 <div class="mb-4">
                     <p class="mb-2" style="font-size:.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Beden</p>
                     <div class="d-flex gap-2 flex-wrap">
+                        @{
+                            var firstInStockSize = sizes.FirstOrDefault(s =>
+                                product.Variants.Any(v => v.Size == s && v.IsActive && v.StockQuantity > 0));
+                        }
                         @foreach (var size in sizes)
                         {
                             var sizeVariant = product.Variants.FirstOrDefault(v => v.Size == size && v.IsActive);
                             var inStock = sizeVariant?.StockQuantity > 0;
-                            <button class="variant-btn @(!inStock ? "disabled" : "") @(sizes.IndexOf(size) == 0 && inStock ? "active" : "")"
+                            <button class="variant-btn @(!inStock ? "disabled" : "") @(size == firstInStockSize ? "active" : "")"
                                     data-variant-group="size"
                                     data-variant-id="@sizeVariant?.Id"
                                     data-stock="@(sizeVariant?.StockQuantity ?? 0)"
@@ -117,21 +178,55 @@
                 </div>
             }
 
-            <input type="hidden" id="selectedVariantId" value="@(product.Variants.FirstOrDefault(v => v.IsActive)?.Id)" />
+            <input type="hidden" id="selectedVariantId"
+                   value="@(product.Variants.FirstOrDefault(v => v.IsActive && v.StockQuantity > 0)?.Id)" />
+            @if (isTakim)
+            {
+                <input type="hidden" id="selectedTopSize" value="" />
+                <input type="hidden" id="selectedPantSize" value="" />
+            }
 
             <!-- Add to Cart -->
             <div class="d-flex gap-3 mt-4">
-                <button class="btn-kw-dark flex-grow-1"
-                        data-add-cart
-                        data-product-id="@product.Id"
-                        data-quantity="1"
-                        onclick="
-                            const vid = document.getElementById('selectedVariantId')?.value;
-                            this.dataset.variantId = vid || '';
-                        ">
-                    Sepete Ekle
-                </button>
+                @if (isPurchasable)
+                {
+                    <button class="btn-kw-dark flex-grow-1"
+                            data-add-cart
+                            data-product-id="@product.Id"
+                            data-quantity="1"
+                            onclick="window.kwPrepareAddToCart(this)">
+                        Sepete Ekle
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-kw-dark flex-grow-1" disabled style="opacity:.5;cursor:not-allowed">
+                        Tükendi
+                    </button>
+                }
             </div>
+
+            <script>
+                window.kwPrepareAddToCart = function (btn) {
+                    const vid = document.getElementById('selectedVariantId')?.value || '';
+                    btn.dataset.variantId = vid;
+                    const pantVal = document.getElementById('selectedPantSize')?.value || '';
+                    btn.dataset.pantSize = pantVal;
+                    const topVal = document.getElementById('selectedTopSize')?.value || '';
+
+                    const labelParts = [];
+                    if (topVal) {
+                        labelParts.push('Beden: ' + topVal);
+                    } else {
+                        const activeSize = document.querySelector('.variant-btn[data-variant-group=size].active');
+                        if (activeSize) labelParts.push('Beden: ' + activeSize.textContent.trim());
+                    }
+                    if (pantVal) labelParts.push('Pantolon: ' + pantVal);
+                    const activeColor = document.querySelector('.variant-btn[data-variant-group=color].active');
+                    if (activeColor && activeColor.title) labelParts.push('Renk: ' + activeColor.title);
+                    btn.dataset.sizeLabel = labelParts.join(', ');
+                };
+            </script>
 
             @{
                 var totalStock = product.Variants.Any()
@@ -151,7 +246,7 @@
 
             <!-- Product Details accordion -->
             <div class="mt-5">
-                <div class="accordion accordion-flush" id="productAccordion">
+                <div class="accordion accordion-flush accordion-kw" id="productAccordion">
                     @if (!string.IsNullOrEmpty(product.Description))
                     {
                         <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
@@ -165,20 +260,27 @@
                             </div>
                         </div>
                     }
-                    @if (!string.IsNullOrEmpty(product.Material))
+                    @if (!string.IsNullOrEmpty(product.Material) || !string.IsNullOrEmpty(product.CareInstructions) || !string.IsNullOrEmpty(product.MannequinMeasurements))
                     {
                         <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
                             <h2 class="accordion-header">
                                 <button class="accordion-button ps-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#materialCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
-                                    Malzeme & Bakım
+                                    Detay
                                 </button>
                             </h2>
                             <div id="materialCollapse" class="accordion-collapse collapse">
                                 <div class="accordion-body ps-0 text-muted" style="font-size:.88rem">
-                                    <p><strong>Malzeme:</strong> @product.Material</p>
+                                    @if (!string.IsNullOrEmpty(product.Material))
+                                    {
+                                        <p><strong>Malzeme:</strong> @product.Material</p>
+                                    }
                                     @if (!string.IsNullOrEmpty(product.CareInstructions))
                                     {
                                         <p><strong>Bakım:</strong> @product.CareInstructions</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(product.MannequinMeasurements))
+                                    {
+                                        <p><strong>Manken Ölçüleri:</strong> @product.MannequinMeasurements</p>
                                     }
                                 </div>
                             </div>
@@ -186,14 +288,16 @@
                     }
                 </div>
             </div>
+            </div>
         </div>
     </div>
 
     <!-- Related Products -->
     @if (Model.RelatedProducts.Any())
     {
-        <div class="mt-6 pt-5 border-top reveal">
-            <h2 class="section-title mb-4">İlgili Ürünler</h2>
+        <div class="mt-6 pt-5 reveal" style="border-top:1px solid var(--kw-hairline)">
+            <p class="section-tag mb-2">Benzer Parçalar</p>
+            <h2 class="section-title mb-4" style="font-size:clamp(1.6rem,2.6vw,2.2rem)">Bunları da <em>sevebilirsiniz</em></h2>
             <div class="row row-cols-2 row-cols-md-4 g-3">
                 @foreach (var related in Model.RelatedProducts)
                 {
@@ -218,3 +322,135 @@
         </div>
     }
 </div>
+
+@if (isTakim)
+{
+    <script>
+        (function () {
+            const dataEl = document.getElementById('takimVariantData');
+            if (!dataEl) return;
+            const variants = JSON.parse(dataEl.textContent);
+            const state = { top: null, pant: null };
+            const defaultLabel = { top: 'Beden Ölçüleri', pant: 'Pantolon Beden Ölçüleri' };
+            const requireTop = @(sizes.Any() ? "true" : "false");
+            const requirePant = @(pantSizes.Any() ? "true" : "false");
+
+            function findVariant() {
+                // Bedenler (üst/alt) genellikle ayrı stok satırları olarak girilir — tam bir
+                // "M üst + 32 alt" kombinasyon satırı yoksa, stok/fiyat için üst beden satırına düş.
+                if (state.top === null) return null;
+                return variants.find(v => v.size === state.top && (state.pant === null || v.pantSize === state.pant))
+                    || variants.find(v => v.size === state.top);
+            }
+
+            function applySelection() {
+                const match = findVariant();
+                const input = document.getElementById('selectedVariantId');
+                if (input) input.value = match ? match.id : '';
+
+                const topInput = document.getElementById('selectedTopSize');
+                if (topInput) topInput.value = state.top || '';
+                const pantInput = document.getElementById('selectedPantSize');
+                if (pantInput) pantInput.value = state.pant || '';
+
+                const warning = document.getElementById('stockWarning');
+                const warningText = document.getElementById('stockWarningText');
+                const stock = match ? match.stock : 0;
+                if (warning && warningText) {
+                    if (match && stock > 0 && stock <= 5) {
+                        warningText.textContent = `Son ${stock} adet!`;
+                        warning.style.display = '';
+                    } else {
+                        warning.style.display = 'none';
+                    }
+                }
+            }
+
+            function closeAllPanels() {
+                document.querySelectorAll('.size-select-panel').forEach(p => p.style.display = 'none');
+                document.querySelectorAll('.size-select-toggle').forEach(t => t.classList.remove('open'));
+            }
+
+            function updateToggleLabel(group) {
+                const span = document.querySelector(`[data-size-toggle-label="${group}"]`);
+                if (!span) return;
+                span.textContent = state[group] ? `${defaultLabel[group]}: ${state[group]}` : defaultLabel[group];
+            }
+
+            document.querySelectorAll('.size-select-toggle').forEach(toggle => {
+                toggle.addEventListener('click', function () {
+                    const group = this.dataset.sizeToggle;
+                    const panel = document.querySelector(`[data-size-panel="${group}"]`);
+                    const isOpen = panel && panel.style.display !== 'none';
+                    closeAllPanels();
+                    if (panel && !isOpen) {
+                        panel.style.display = '';
+                        this.classList.add('open');
+                    }
+                });
+            });
+
+            document.querySelectorAll('input[data-size-group][data-size-value]').forEach(radio => {
+                radio.addEventListener('change', function () {
+                    const group = this.dataset.sizeGroup;
+                    state[group] = this.dataset.sizeValue;
+                    updateToggleLabel(group);
+                    applySelection();
+                    closeAllPanels();
+                });
+            });
+
+            document.querySelectorAll('[data-clear-group]').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const group = this.dataset.clearGroup;
+                    document.querySelectorAll(`input[data-size-group="${group}"]`).forEach(r => r.checked = false);
+                    state[group] = null;
+                    updateToggleLabel(group);
+                    applySelection();
+                    closeAllPanels();
+                });
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.size-select-row') && !e.target.closest('.size-select-panel')) {
+                    closeAllPanels();
+                }
+            });
+
+            // Sepete eklemeden önce gerekli bedenlerin seçildiğinden emin ol — yakalama
+            // (capture) aşamasında çalışır ki eksikse site.js'teki sepete ekleme isteği hiç atılmasın.
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('[data-add-cart]');
+                if (!btn) return;
+                const missingTop = requireTop && !state.top;
+                const missingPant = requirePant && !state.pant;
+                if (missingTop || missingPant) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof showToast === 'function') {
+                        showToast('Lütfen beden ve pantolon bedeni seçiniz.', 'error');
+                    }
+                }
+            }, true);
+
+            // Varsayılan seçim: her ölçü grubu için stokta olan ilk değeri ayrı ayrı seç
+            // (üst ve alt bedenler genelde bağımsız satırlar olduğu için aynı satırdan gelmeleri şart değil).
+            const firstTopWithStock = variants.find(v => v.size && v.stock > 0);
+            const firstPantWithStock = variants.find(v => v.pantSize && v.stock > 0);
+            if (firstTopWithStock) {
+                state.top = firstTopWithStock.size;
+                const topRadio = document.querySelector(`input[data-size-group="top"][data-size-value="${CSS.escape(state.top)}"]`);
+                if (topRadio) topRadio.checked = true;
+                updateToggleLabel('top');
+            }
+            if (firstPantWithStock) {
+                state.pant = firstPantWithStock.pantSize;
+                const pantRadio = document.querySelector(`input[data-size-group="pant"][data-size-value="${CSS.escape(state.pant)}"]`);
+                if (pantRadio) pantRadio.checked = true;
+                updateToggleLabel('pant');
+            }
+            applySelection();
+        })();
+    </script>
+}

@@ -36,17 +36,7 @@
                         <div class="col-md-3">
                             <small class="text-muted d-block">Durum</small>
                             <span class="status-badge status-@order.Status.ToString().ToLower()">
-                                @(order.Status switch {
-                                    KedWear.Core.Enums.OrderStatus.Pending => "Bekliyor",
-                                    KedWear.Core.Enums.OrderStatus.PaymentPending => "Ödeme Bekleniyor",
-                                    KedWear.Core.Enums.OrderStatus.PaymentSuccess => "Ödeme Alındı",
-                                    KedWear.Core.Enums.OrderStatus.PaymentFailed => "Ödeme Başarısız",
-                                    KedWear.Core.Enums.OrderStatus.Processing => "Hazırlanıyor",
-                                    KedWear.Core.Enums.OrderStatus.Shipped => "Kargoya Verildi",
-                                    KedWear.Core.Enums.OrderStatus.Delivered => "Teslim Edildi",
-                                    KedWear.Core.Enums.OrderStatus.Cancelled => "İptal Edildi",
-                                    _ => order.Status.ToString()
-                                })
+                                @order.Status.ToDisplayName()
                             </span>
                         </div>
                         <div class="col-md-2 text-md-end mt-3 mt-md-0">

@@ -12,6 +12,7 @@
                 <h6 class="mb-0 fw-600">Sipariş Kalemleri</h6>
             </div>
             <div class="card-body p-0">
+                <div class="table-responsive">
                 <table class="table mb-0" style="font-size:.87rem">
                     <tbody>
                         @foreach (var item in Model.Items)
@@ -36,6 +37,7 @@
                         }
                     </tbody>
                 </table>
+                </div>
                 <div class="p-3 border-top">
                     <div class="d-flex justify-content-between mb-1" style="font-size:.85rem">
                         <span class="text-muted">Ara Toplam</span>
@@ -83,14 +85,13 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <span class="status-badge status-@Model.Status.ToString().ToLower()">@Model.Status</span>
+                    <span class="status-badge status-@Model.Status.ToString().ToLower()">@Model.Status.ToDisplayName()</span>
                 </div>
-                <form asp-controller="OrderAdmin" asp-action="UpdateStatus" method="post">
+                <form asp-controller="OrderAdmin" asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" name="orderId" value="@Model.Id" />
-                    <select name="status" class="form-select mb-2"
+                    <select asp-for="Status" class="form-select mb-2"
                             asp-items="Html.GetEnumSelectList<KedWear.Core.Enums.OrderStatus>()"></select>
-                    <input type="text" name="trackingNumber" class="form-control mb-2"
+                    <input type="text" name="takipNo" class="form-control mb-2"
                            value="@Model.TrackingNumber" placeholder="Kargo takip no (opsiyonel)" style="font-size:.85rem" />
                     <button type="submit" class="btn btn-dark btn-sm w-100">Güncelle</button>
                 </form>
@@ -107,7 +108,7 @@
                 <div class="card-body" style="font-size:.85rem">
                     <div class="d-flex justify-content-between mb-1">
                         <span class="text-muted">Durum</span>
-                        <span>@Model.Payment.Status</span>
+                        <span>@Model.Payment.Status.ToDisplayName()</span>
                     </div>
                     <div class="d-flex justify-content-between mb-1">
                         <span class="text-muted">İşlem No</span>

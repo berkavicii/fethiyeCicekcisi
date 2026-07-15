@@ -11,37 +11,33 @@ using SixLabors.ImageSharp.Processing;
 
 namespace KedWear.Application.Services;
 
-public class FileService : IFileService
+/// <summary>Shared image pipeline (validation, HEIC detection, resize + re-encode via
+/// ImageSharp). Where the processed bytes end up is the storage backend's job: see
+/// <see cref="FileService"/> (local disk) and <see cref="R2FileService"/> (Cloudflare R2).</summary>
+public abstract class ImageFileServiceBase : IFileService
 {
-    private readonly IWebHostEnvironment _env;
     private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
     // Modern phone cameras routinely produce 5-10MB JPEGs; the server resizes/recompresses
     // on upload anyway (see UploadImageAsync), so a generous input ceiling costs nothing.
     private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
     private const int MaxDimension = 1600;
-    private const string UploadsRoot = "uploads";
-
-    public FileService(IWebHostEnvironment env) => _env = env;
 
     public async Task<string> UploadImageAsync(Stream fileStream, string fileName, string folder = "products")
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        return await ProcessAndSaveAsync(fileStream, ext, folder);
+        return await ProcessAndStoreAsync(fileStream, ext, folder);
     }
 
     public async Task<string> ImportLocalImageAsync(string sourceFilePath, string folder = "products")
     {
         var ext = Path.GetExtension(sourceFilePath).ToLowerInvariant();
         await using var stream = File.OpenRead(sourceFilePath);
-        return await ProcessAndSaveAsync(stream, ext, folder);
+        return await ProcessAndStoreAsync(stream, ext, folder);
     }
 
-    private async Task<string> ProcessAndSaveAsync(Stream fileStream, string ext, string folder)
+    private async Task<string> ProcessAndStoreAsync(Stream fileStream, string ext, string folder)
     {
         var uniqueName = $"{Guid.NewGuid()}{ext}";
-        var uploadPath = Path.Combine(_env.WebRootPath, UploadsRoot, folder);
-        Directory.CreateDirectory(uploadPath);
-        var filePath = Path.Combine(uploadPath, uniqueName);
 
         using var image = await Image.LoadAsync(fileStream);
 
@@ -55,10 +51,18 @@ public class FileService : IFileService
         }
 
         var encoder = GetEncoderFor(ext);
-        await image.SaveAsync(filePath, encoder);
+        using var processed = new MemoryStream();
+        await image.SaveAsync(processed, encoder);
+        processed.Position = 0;
 
-        return $"/{UploadsRoot}/{folder}/{uniqueName}";
+        return await StoreProcessedImageAsync(processed, GetContentTypeFor(ext), folder, uniqueName);
     }
+
+    /// <summary>Persists the already-processed image bytes and returns the URL that will be
+    /// stored in the database (site-relative for disk, absolute public URL for R2).</summary>
+    protected abstract Task<string> StoreProcessedImageAsync(Stream processedImage, string contentType, string folder, string fileName);
+
+    public abstract Task DeleteImageAsync(string imageUrl);
 
     private static SixLabors.ImageSharp.Formats.IImageEncoder GetEncoderFor(string ext) => ext switch
     {
@@ -68,14 +72,13 @@ public class FileService : IFileService
         _ => new PngEncoder()
     };
 
-    public Task DeleteImageAsync(string imageUrl)
+    private static string GetContentTypeFor(string ext) => ext switch
     {
-        if (string.IsNullOrEmpty(imageUrl)) return Task.CompletedTask;
-        var filePath = Path.Combine(_env.WebRootPath, imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-        if (File.Exists(filePath))
-            File.Delete(filePath);
-        return Task.CompletedTask;
-    }
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        _ => "image/png"
+    };
 
     public bool IsValidImage(string fileName, long fileSize) =>
         GetImageValidationError(fileName, fileSize) is null;
@@ -137,6 +140,37 @@ public class FileService : IFileService
     }
 }
 
+/// <summary>Local-disk storage backend — used when no R2 configuration is present
+/// (see DependencyInjection), so the app keeps working in dev without cloud credentials.</summary>
+public class FileService : ImageFileServiceBase
+{
+    private readonly IWebHostEnvironment _env;
+    private const string UploadsRoot = "uploads";
+
+    public FileService(IWebHostEnvironment env) => _env = env;
+
+    protected override async Task<string> StoreProcessedImageAsync(Stream processedImage, string contentType, string folder, string fileName)
+    {
+        var uploadPath = Path.Combine(_env.WebRootPath, UploadsRoot, folder);
+        Directory.CreateDirectory(uploadPath);
+        var filePath = Path.Combine(uploadPath, fileName);
+
+        await using var fs = File.Create(filePath);
+        await processedImage.CopyToAsync(fs);
+
+        return $"/{UploadsRoot}/{folder}/{fileName}";
+    }
+
+    public override Task DeleteImageAsync(string imageUrl)
+    {
+        if (string.IsNullOrEmpty(imageUrl)) return Task.CompletedTask;
+        var filePath = Path.Combine(_env.WebRootPath, imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(filePath))
+            File.Delete(filePath);
+        return Task.CompletedTask;
+    }
+}
+
 public class SlugService : ISlugService
 {
     private readonly IProductRepository _productRepo;
@@ -180,10 +214,7 @@ public class SlugService : ISlugService
     private async Task<bool> SlugExistsAsync(string slug, string entityType, int? excludeId)
     {
         if (entityType == "product")
-        {
-            var product = await _productRepo.FirstOrDefaultAsync(p => p.Slug == slug);
-            return product != null && product.Id != excludeId;
-        }
+            return await _productRepo.SlugExistsAsync(slug, excludeId);
         if (entityType == "category")
         {
             var cat = await _categoryRepo.FirstOrDefaultAsync(c => c.Slug == slug);

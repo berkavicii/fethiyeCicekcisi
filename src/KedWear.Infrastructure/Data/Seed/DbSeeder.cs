@@ -32,7 +32,6 @@ public static class DbSeeder
             await SeedRolesAsync(roleManager);
             await SeedAdminUserAsync(userManager);
             await SeedCategoriesAsync(context);
-            await SeedProductsAsync(context);
             await SeedRealProductsFromFolderAsync(scope.ServiceProvider, context, logger);
             logger.LogInformation("Seed data başarıyla yüklendi.");
         }
@@ -70,8 +69,26 @@ public static class DbSeeder
                 continue;
             }
 
-            if (await context.Products.AnyAsync(p => p.Name == name))
-                continue; // already seeded on a previous run
+            var existing = await context.Products.Include(p => p.Variants)
+                                                 .FirstOrDefaultAsync(p => p.Name == name);
+            if (existing is not null)
+            {
+                // Already seeded on a previous run. Stock lines may have been added to the
+                // manifest after the product was first imported (the field is newer than some
+                // entries), so backfill variants once — but never overwrite live stock counts,
+                // which the admin may have adjusted since.
+                if (existing.Variants.Count == 0)
+                {
+                    var backfill = ParseVariants(entry);
+                    if (backfill.Count > 0)
+                    {
+                        foreach (var v in backfill) existing.Variants.Add(v);
+                        await context.SaveChangesAsync();
+                        logger.LogInformation("seed-images/urunler.txt: '{Name}' için stok/beden bilgisi sonradan eklendi.", name);
+                    }
+                }
+                continue;
+            }
 
             entry.TryGetValue("klasor", out var folder);
             entry.TryGetValue("kategori", out var categoryName);
@@ -117,6 +134,16 @@ public static class DbSeeder
                 IsFeatured = true,
                 CreatedAt = DateTime.UtcNow
             };
+
+            var variants = ParseVariants(entry);
+            if (variants.Count == 0)
+            {
+                logger.LogWarning(
+                    "seed-images/urunler.txt: '{Name}' için 'bedenler' ya da 'stok' satırı yok — ürün stoksuz eklendi ve satın alınamayacak. " +
+                    "Manifest'e stok ekleyip uygulamayı yeniden başlatın ya da admin panelinden varyant girin.", name);
+            }
+            foreach (var variant in variants)
+                product.Variants.Add(variant);
 
             var photosDir = Path.Combine(seedRoot, folder);
             if (Directory.Exists(photosDir))
@@ -173,6 +200,35 @@ public static class DbSeeder
         }
     }
 
+    /// <summary>Manifest'teki stok satırlarını varyantlara çevirir.
+    /// "bedenler: S=10, M=15, L=0" → beden başına bir varyant (0 stoklu beden de eklenir ki
+    /// sitede "tükendi" olarak görünsün). Bedensiz ürünler (ör. çanta) için "stok: 8" →
+    /// tek varyant. İkisi de yoksa boş liste döner.</summary>
+    private static List<ProductVariant> ParseVariants(Dictionary<string, string> entry)
+    {
+        var variants = new List<ProductVariant>();
+
+        if (entry.TryGetValue("bedenler", out var sizesText) && !string.IsNullOrWhiteSpace(sizesText))
+        {
+            foreach (var part in sizesText.Split(','))
+            {
+                var pieces = part.Split('=');
+                var size = pieces[0].Trim().ToUpperInvariant();
+                if (size.Length == 0) continue;
+
+                var qty = 0;
+                if (pieces.Length > 1) int.TryParse(pieces[1].Trim(), out qty);
+                variants.Add(new ProductVariant { Size = size, StockQuantity = qty, IsActive = true });
+            }
+        }
+        else if (entry.TryGetValue("stok", out var stockText) && int.TryParse(stockText, out var stock))
+        {
+            variants.Add(new ProductVariant { StockQuantity = stock, IsActive = true });
+        }
+
+        return variants;
+    }
+
     private static List<Dictionary<string, string>> ParseManifest(string text)
     {
         var blocks = new List<Dictionary<string, string>>();
@@ -215,7 +271,10 @@ public static class DbSeeder
         var baseSlug = Slugify(name);
         var slug = baseSlug;
         var counter = 1;
-        while (await context.Products.AnyAsync(p => p.Slug == slug))
+        // IgnoreQueryFilters: the Product query filter hides soft-deleted rows, but the DB's
+        // unique index on Slug still covers them — checking without it would hand out a slug
+        // that's actually still taken and crash the INSERT with a 23505 duplicate key error.
+        while (await context.Products.IgnoreQueryFilters().AnyAsync(p => p.Slug == slug))
             slug = $"{baseSlug}-{counter++}";
         return slug;
     }
@@ -249,245 +308,52 @@ public static class DbSeeder
             await userManager.AddToRoleAsync(admin, "Admin");
     }
 
+    /// <summary>Navigasyondaki "Koleksiyon" menüsü bu sabit kategorilere link verir (slug ile),
+    /// o yüzden hepsinin DB'de var olması garanti edilir. Slug bazlı upsert: eksik olan eklenir,
+    /// var olan olduğu gibi bırakılır (admin'in ad/sıra düzenlemeleri ezilmez) — tek istisna,
+    /// hâlâ eski seed adını taşıyan kategorinin yeni ada taşınması ve yanlışlıkla silinen
+    /// canonical kategorinin geri açılması. Her açılışta çalışır, idempotenttir.</summary>
     private static async Task SeedCategoriesAsync(AppDbContext context)
     {
-        if (await context.Categories.AnyAsync()) return;
-
-        var categories = new List<Category>
+        var canonical = new List<Category>
         {
-            new() { Name = "T-Shirt", Slug = "tisort", Description = "Oversize ve baskılı tişörtler", DisplayOrder = 1, IsActive = true,
-                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg" },
-            new() { Name = "Çanta", Slug = "canta", Description = "Kanvas ve el yapımı çantalar", DisplayOrder = 2, IsActive = true,
+            new() { Name = "Çanta", Slug = "canta", Description = "Kanvas ve el yapımı çantalar", DisplayOrder = 1, IsActive = true,
                 ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg" },
-            new() { Name = "Pantolon", Slug = "pantolon", Description = "Jogger ve günlük pantolonlar", DisplayOrder = 3, IsActive = true,
-                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_15536f67f94865229083841f07eb0152.jpeg" },
-            new() { Name = "Takım", Slug = "takim", Description = "Alt üst takımlar ve setler", DisplayOrder = 4, IsActive = true,
-                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg" },
-            new() { Name = "Hoodie", Slug = "hoodie", Description = "Sweatshirt ve hoodie modelleri", DisplayOrder = 5, IsActive = true,
+            new() { Name = "Rüzgarlık/Yağmurluk", Slug = "ruzgarlik-yagmurluk", Description = "Rüzgarlık ve yağmurluk modelleri", DisplayOrder = 2, IsActive = true },
+            new() { Name = "Hoodie/Sweatshirt", Slug = "hoodie", Description = "Sweatshirt ve hoodie modelleri", DisplayOrder = 3, IsActive = true,
                 ImageUrl = "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=600&q=80" },
+            new() { Name = "Çorap/Şapka", Slug = "corap", Description = "Baskılı ve renkli çorap ve şapkalar", DisplayOrder = 4, IsActive = true },
+            new() { Name = "T-Shirt", Slug = "tisort", Description = "Oversize ve baskılı tişörtler", DisplayOrder = 5, IsActive = true,
+                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg" },
+            new() { Name = "Eşofman Alt", Slug = "esofman-alt", Description = "Rahat kesim eşofman altları", DisplayOrder = 6, IsActive = true },
+            new() { Name = "Pantolon", Slug = "pantolon", Description = "Jogger ve günlük pantolonlar", DisplayOrder = 7, IsActive = true,
+                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_15536f67f94865229083841f07eb0152.jpeg" },
+            new() { Name = "Alt Üst Takımlar", Slug = "takim", Description = "Alt üst takımlar ve setler", DisplayOrder = 8, IsActive = true,
+                ImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg" },
         };
 
-        await context.Categories.AddRangeAsync(categories);
-        await context.SaveChangesAsync();
-    }
+        // Eski seed adları → canonical ad geçişi (yalnızca admin adı hiç değiştirmediyse uygulanır)
+        var legacyNames = new Dictionary<string, string> { ["hoodie"] = "Hoodie", ["takim"] = "Takım", ["corap"] = "Çorap" };
 
-    private static async Task SeedProductsAsync(AppDbContext context)
-    {
-        if (await context.Products.AnyAsync()) return;
-
-        var tisort   = await context.Categories.FirstAsync(c => c.Slug == "tisort");
-        var canta    = await context.Categories.FirstAsync(c => c.Slug == "canta");
-        var pantolon = await context.Categories.FirstAsync(c => c.Slug == "pantolon");
-        var takim    = await context.Categories.FirstAsync(c => c.Slug == "takim");
-        var hoodie   = await context.Categories.FirstAsync(c => c.Slug == "hoodie");
-
-        var products = new List<Product>
+        foreach (var cat in canonical)
         {
-            new()
+            var existing = await context.Categories.FirstOrDefaultAsync(c => c.Slug == cat.Slug);
+            if (existing is null)
             {
-                Name = "TERMINAL AA1 OVERSIZE TİŞÖRT",
-                Slug = "terminal-aa1-oversize-tisort",
-                ShortDescription = "Terminal Departures Ön ve Arka Baskılı Oversize Tişört",
-                Description = "Terminal Departures ön ve arka baskılı oversize tişört. Her parça bir yolculuk hikayesi anlatır. 30 derecede ters çevirerek yıkayınız.",
-                Price = 750.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk Oversize",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 10, IsActive = true },
-                    new() { Size = "M", StockQuantity = 15, IsActive = true },
-                    new() { Size = "L", StockQuantity = 12, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 8, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "PASIFIC REPUBLIC OVERSIZE TİŞÖRT",
-                Slug = "pasific-republic-oversize-tisort",
-                ShortDescription = "Pasific Republic Ön ve Arka Yazı Baskılı Oversize Tişört",
-                Description = "Pasific Republic ön ve arka yazı baskılı oversize tişört. 30 derecede ters çevirerek yıkayınız. S M L XL beden ölçüleri mevcuttur.",
-                Price = 750.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk Oversize",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_09df88659695edfd8e44fb389a9d2a73.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 8, IsActive = true },
-                    new() { Size = "M", StockQuantity = 12, IsActive = true },
-                    new() { Size = "L", StockQuantity = 10, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 6, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "SOLEIL ÖN BASKILI OVERSIZE TİŞÖRT",
-                Slug = "soleil-on-baskili-oversize-tisort",
-                ShortDescription = "Soleil Ön Baskılı Oversize Tişört",
-                Description = "Soleil ön baskılı oversize tişört. 30 derecede ters çevirip yıkayınız. S M L XL beden ölçüleri mevcuttur.",
-                Price = 750.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk Oversize",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_0c3e16cf2e7927c702685550acb418ca.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 10, IsActive = true },
-                    new() { Size = "M", StockQuantity = 14, IsActive = true },
-                    new() { Size = "L", StockQuantity = 10, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 5, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "NEVER SURF ALONE OVERSIZE TİŞÖRT",
-                Slug = "never-surf-alone-oversize-tisort",
-                ShortDescription = "Never Surf Alone Ön ve Arka Baskılı Oversize Tişört",
-                Description = "Never Surf Alone ön ve arka baskılı oversize tişört. 30 derecede ters çevirip yıkayınız. S M L XL beden ölçüleri mevcuttur.",
-                Price = 750.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = false,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk Oversize",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_0cf9e8a911ee202b849169a144ffbe68.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 7, IsActive = true },
-                    new() { Size = "M", StockQuantity = 11, IsActive = true },
-                    new() { Size = "L", StockQuantity = 9, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 4, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "EL CAMINO BASKILI TİŞÖRT",
-                Slug = "el-camino-baskili-tisort",
-                ShortDescription = "El Camino Ön ve Arka Baskılı Tişört",
-                Description = "El Camino ön ve arka baskılı tişört. M L XL beden ölçüleri mevcuttur. Manken ölçüleri: 173 boy 72 kg L beden. 30 derecede ters çevirerek yıkayınız.",
-                Price = 600.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = false,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_baaf1614324222d924e1bdc6500ba65e.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "M", StockQuantity = 12, IsActive = true },
-                    new() { Size = "L", StockQuantity = 10, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 7, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "JOURNEY BASKILI TİŞÖRT",
-                Slug = "journey-baskili-tisort",
-                ShortDescription = "Journey Ön ve Arka Baskılı Tişört",
-                Description = "Journey ön ve arka baskılı tişört. M L XL beden ölçüleri mevcuttur. Manken ölçüleri: 173 boy 72 kg L beden. 30 derecede ters çevirerek yıkayınız.",
-                Price = 600.00m,
-                CategoryId = tisort.Id,
-                IsFeatured = false,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_e0b4bd99b62a320b1626cb372080bd0d.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "M", StockQuantity = 10, IsActive = true },
-                    new() { Size = "L", StockQuantity = 12, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 6, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "HARDAL STAY SALTY KANVAS ÇANTA",
-                Slug = "hardal-stay-salty-kanvas-canta",
-                ShortDescription = "Hardal rengi Stay Salty kanvas çanta",
-                Description = "Kum rengi kanvas çanta. Çanta ölçüleri: En 37 cm, Boy 37 cm. Dayanıklı kanvas kumaş, Stay Salty baskı.",
-                Price = 1450.00m,
-                CategoryId = canta.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "Kanvas",
-                CareInstructions = "Nemli bez ile silin",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Color = "Hardal", ColorCode = "#C8A84B", StockQuantity = 8, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "KAHVE STAY SALTY KANVAS ÇANTA",
-                Slug = "kahve-stay-salty-kanvas-canta",
-                ShortDescription = "Kahve rengi Stay Salty kanvas çanta",
-                Description = "Kahve rengi kanvas çanta. Çanta ölçüleri: En 37 cm, Boy 37 cm. Dayanıklı kanvas kumaş, Stay Salty baskı.",
-                Price = 1450.00m,
-                CategoryId = canta.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "Kanvas",
-                CareInstructions = "Nemli bez ile silin",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_f335e287f0e065f5483cdb514e9d16c6.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Color = "Kahve", ColorCode = "#6B4226", StockQuantity = 6, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "JOGGER PANTOLON x PARMESAN CHEESE KOMBİN",
-                Slug = "jogger-pantolon-parmesan-cheese-kombin",
-                ShortDescription = "Jogger pantolon ve Parmesan Cheese kombini",
-                Description = "Jogger Pantolon x Parmesan Cheese Kombin. Beden belirtiniz. Rahat ve şık günlük kullanım için ideal jogger pantolon kombini.",
-                Price = 1500.00m,
-                CategoryId = takim.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "Karışık Kumaş",
-                CareInstructions = "30°C'de yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_15536f67f94865229083841f07eb0152.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 5, IsActive = true },
-                    new() { Size = "M", StockQuantity = 8, IsActive = true },
-                    new() { Size = "L", StockQuantity = 6, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 4, IsActive = true },
-                }
-            },
-            new()
-            {
-                Name = "SUMMER 3'LÜ SET",
-                Slug = "summer-3lu-set",
-                ShortDescription = "Yaz sezonu için özel 3'lü set",
-                Description = "30 derecede ters çevirip yıkayınız. Tişört modellerimiz Unisex'tir. S M L XL beden ölçüleri mevcuttur.",
-                Price = 1800.00m,
-                CategoryId = takim.Id,
-                IsFeatured = true,
-                Status = ProductStatus.Active,
-                Material = "%100 Pamuk",
-                CareInstructions = "30°C ters çevirerek yıkayın",
-                MainImageUrl = "https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg",
-                Variants = new List<ProductVariant>
-                {
-                    new() { Size = "S", StockQuantity = 5, IsActive = true },
-                    new() { Size = "M", StockQuantity = 7, IsActive = true },
-                    new() { Size = "L", StockQuantity = 5, IsActive = true },
-                    new() { Size = "XL", StockQuantity = 3, IsActive = true },
-                }
-            },
-        };
+                await context.Categories.AddAsync(cat);
+                continue;
+            }
 
-        await context.Products.AddRangeAsync(products);
+            if (legacyNames.TryGetValue(cat.Slug, out var oldName) && existing.Name == oldName)
+                existing.Name = cat.Name;
+
+            if (existing.IsDeleted || !existing.IsActive)
+            {
+                existing.IsDeleted = false;
+                existing.IsActive = true;
+            }
+        }
+
         await context.SaveChangesAsync();
     }
 }

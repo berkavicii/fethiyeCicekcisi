@@ -43,6 +43,9 @@ public class AdminProductViewModel
     [Display(Name = "Bakım Talimatları")]
     public string? CareInstructions { get; set; }
 
+    [Display(Name = "Manken Ölçüleri")]
+    public string? MannequinMeasurements { get; set; }
+
     [Display(Name = "Sıralama")]
     public int DisplayOrder { get; set; }
 
@@ -55,6 +58,7 @@ public class AdminVariantViewModel
 {
     public int Id { get; set; }
     public string? Size { get; set; }
+    public string? PantSize { get; set; }
     public string? Color { get; set; }
     public string? ColorCode { get; set; }
     public int StockQuantity { get; set; }
@@ -87,6 +91,20 @@ public class AdminCategoryViewModel
     public string? ImageUrl { get; set; }
 
     public IEnumerable<Category>? ParentCategories { get; set; }
+}
+
+public class AdminStatsViewModel
+{
+    public IReadOnlyList<KedWear.Core.Models.ProductSalesStat> Stats { get; set; } = [];
+    /// <summary>Seçili dönem filtresi (gün sayısı: "30", "90", "365"); null = tüm zamanlar.</summary>
+    public string? Period { get; set; }
+
+    public int TotalUnitsSold => Stats.Sum(s => s.UnitsSold);
+    public decimal TotalRevenue => Stats.Sum(s => s.Revenue);
+    public int TotalUnitsRefunded => Stats.Sum(s => s.UnitsRefunded);
+    public double OverallRefundRate => TotalUnitsSold + TotalUnitsRefunded == 0
+        ? 0
+        : (double)TotalUnitsRefunded / (TotalUnitsSold + TotalUnitsRefunded);
 }
 
 public class AdminOrderListViewModel

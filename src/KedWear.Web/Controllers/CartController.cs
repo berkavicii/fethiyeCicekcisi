@@ -54,7 +54,7 @@ public class CartController : Controller
         var userId = GetUserId();
         var sessionId = GetSessionId();
 
-        var (success, message) = await _cartService.AddToCartAsync(userId, sessionId, model.ProductId, model.VariantId, model.Quantity);
+        var (success, message) = await _cartService.AddToCartAsync(userId, sessionId, model.ProductId, model.VariantId, model.Quantity, model.PantSize);
         var count = await _cartService.GetCartCountAsync(userId, sessionId);
 
         return Json(new { success, message, cartCount = count });

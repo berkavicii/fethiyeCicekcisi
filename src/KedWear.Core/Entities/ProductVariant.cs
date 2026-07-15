@@ -5,6 +5,7 @@ public class ProductVariant : BaseEntity
     public int ProductId { get; set; }
     public Product Product { get; set; } = null!;
     public string? Size { get; set; }
+    public string? PantSize { get; set; }
     public string? Color { get; set; }
     public string? ColorCode { get; set; }
     public int StockQuantity { get; set; } = 0;

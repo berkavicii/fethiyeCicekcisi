@@ -21,14 +21,17 @@
         <!-- Free shipping progress -->
         @if (Model.RemainingForFreeShipping > 0)
         {
-            <div class="alert alert-light border mb-4" style="font-size:.85rem">
+            var threshold = Model.SubTotal + Model.RemainingForFreeShipping;
+            var shipPercent = threshold > 0 ? Math.Min(100, Math.Round(Model.SubTotal / threshold * 100)) : 0;
+            <div class="ship-note mb-4">
                 <i class="bi bi-truck me-1"></i>
-                Ücretsiz kargo için <strong>@Model.RemainingForFreeShipping.ToString("N2") ₺</strong> daha alışveriş yapın.
+                Ücretsiz kargoya <strong>@Model.RemainingForFreeShipping.ToString("N2") ₺</strong> kaldı.
+                <div class="ship-progress"><div class="ship-progress-bar" style="width:@shipPercent%"></div></div>
             </div>
         }
         else
         {
-            <div class="alert alert-success border-0 mb-4" style="font-size:.85rem">
+            <div class="ship-note ship-note-earned mb-4">
                 <i class="bi bi-check-circle me-1"></i> Ücretsiz kargo kazandınız!
             </div>
         }
@@ -50,11 +53,13 @@
                                         <a asp-controller="Product" asp-action="Detail"
                                            asp-route-slug="@item.Product?.Slug">@item.Product?.Name</a>
                                     </h6>
-                                    @if (item.ProductVariant != null)
+                                    @if (item.ProductVariant != null || !string.IsNullOrEmpty(item.PantSize))
                                     {
                                         <small class="text-muted">
-                                            @if (!string.IsNullOrEmpty(item.ProductVariant.Size)) { <span>Beden: @item.ProductVariant.Size</span> }
-                                            @if (!string.IsNullOrEmpty(item.ProductVariant.Color)) { <span class="ms-2">Renk: @item.ProductVariant.Color</span> }
+                                            @if (!string.IsNullOrEmpty(item.ProductVariant?.Size)) { <span>Beden: @item.ProductVariant.Size</span> }
+                                            @{ var pantSize = item.PantSize ?? item.ProductVariant?.PantSize; }
+                                            @if (!string.IsNullOrEmpty(pantSize)) { <span class="ms-2">Pantolon: @pantSize</span> }
+                                            @if (!string.IsNullOrEmpty(item.ProductVariant?.Color)) { <span class="ms-2">Renk: @item.ProductVariant.Color</span> }
                                         </small>
                                     }
                                 </div>

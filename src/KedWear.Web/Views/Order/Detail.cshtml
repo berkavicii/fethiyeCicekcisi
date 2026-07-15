@@ -55,7 +55,7 @@
                     <div class="mb-1"><span class="text-muted">Sipariş No: </span><strong>@Model.OrderNumber</strong></div>
                     <div class="mb-1"><span class="text-muted">Tarih: </span>@Model.CreatedAt.ToString("dd.MM.yyyy")</div>
                     <div class="mb-1"><span class="text-muted">Durum: </span>
-                        <span class="status-badge status-@Model.Status.ToString().ToLower()">@Model.Status</span>
+                        <span class="status-badge status-@Model.Status.ToString().ToLower()">@Model.Status.ToDisplayName()</span>
                     </div>
                     @if (!string.IsNullOrEmpty(Model.TrackingNumber))
                     {

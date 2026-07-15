@@ -1,7 +1,8 @@
+@model IEnumerable<KedWear.Core.Entities.Category>
 @{
     ViewData["Title"] = "Kategoriler";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
-    var categories = ViewBag.Categories as IEnumerable<KedWear.Core.Entities.Category> ?? Enumerable.Empty<KedWear.Core.Entities.Category>();
+    var categories = Model;
 }
 
 <div class="d-flex justify-content-end mb-4">
@@ -12,6 +13,7 @@
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
+        <div class="table-responsive">
         <table class="table table-hover mb-0" style="font-size:.87rem">
             <thead>
                 <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
@@ -52,5 +54,6 @@
                 }
             </tbody>
         </table>
+        </div>
     </div>
 </div>

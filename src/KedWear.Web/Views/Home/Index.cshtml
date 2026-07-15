@@ -13,11 +13,11 @@
     <div class="hero-overlay"></div>
     <div class="container position-relative" style="z-index:2">
         <div class="row">
-            <div class="col-lg-6 col-xl-5">
-                <span class="hero-tag">Yeni Koleksiyon 2026</span>
-                <h1 class="mb-4">Her parça<br>bir hikaye<br>anlatır.</h1>
-                <p class="hero-sub mb-5">Minimal, şık ve özgün tasarımlar. Kıyafet, çanta ve aksesuarlarla özgün stilinizi yaratın.</p>
-                <div class="d-flex flex-wrap gap-3">
+            <div class="col-lg-7 col-xl-6">
+                <span class="hero-tag hero-rise" style="--rise-i:0">Yeni Koleksiyon 2026</span>
+                <h1 class="mb-4 hero-rise" style="--rise-i:1">Her parça<br>bir <em>hikaye</em><br>anlatır.</h1>
+                <p class="hero-sub mb-5 hero-rise" style="--rise-i:2">Minimal, şık ve özgün tasarımlar. Kıyafet, çanta ve aksesuarlarla kendi stilinizi yaratın.</p>
+                <div class="d-flex flex-wrap gap-3 hero-rise" style="--rise-i:3">
                     <a asp-controller="Product" asp-action="Index" class="btn-kw-dark">Alışverişe Başla</a>
                     <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="btn-kw-outline-light">Çantalar</a>
                 </div>
@@ -31,42 +31,48 @@
 </section>
 
 <section class="py-5 bg-white" id="kategoriler">
-    <div class="container py-4">
+    <div class="container" style="padding-top:4rem;padding-bottom:4.5rem">
         <div class="text-center mb-5 reveal">
             <p class="section-tag">Kategoriler</p>
-            <h2 class="section-title">Koleksiyonumuzu Keşfet</h2>
+            <h2 class="section-title">Koleksiyonu <em>keşfet</em></h2>
         </div>
-        <div class="row g-3">
+        <div class="row g-4 g-lg-5">
             <div class="col-md-4 reveal">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="tisort" class="d-block">
-                    <div class="category-card">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="tisort" class="collection-card">
+                    <div class="collection-card-media">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_14bba417f7cb6348319bb8dae4a545ba.jpeg"
                              alt="T-Shirt" loading="lazy" />
-                        <div class="category-card-label">
-                            <h3>T-Shirt</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
-                        </div>
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">01</span>
+                        <h3>T-Shirt</h3>
+                        <i class="bi bi-arrow-right"></i>
                     </div>
                 </a>
             </div>
-            <div class="col-md-4 reveal" style="transition-delay:.08s">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="d-block">
-                    <div class="category-card">
+            <div class="col-md-4 reveal" style="transition-delay:.1s">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="canta" class="collection-card">
+                    <div class="collection-card-media">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_7c6d5f72e7b76f9a63a5acf38217b238.jpeg"
                              alt="Çanta" loading="lazy" />
-                        <div class="category-card-label">
-                            <h3>Çanta</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
-                        </div>
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">02</span>
+                        <h3>Çanta</h3>
+                        <i class="bi bi-arrow-right"></i>
                     </div>
                 </a>
             </div>
-            <div class="col-md-4 reveal" style="transition-delay:.16s">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="takim" class="d-block">
-                    <div class="category-card">
+            <div class="col-md-4 reveal" style="transition-delay:.2s">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="takim" class="collection-card">
+                    <div class="collection-card-media">
                         <img src="https://cdn.shopier.app/pictures_large/kedwear_94d3e0c9143ea6a8b995dfdee3a671c5.jpeg"
                              alt="Takım" loading="lazy" />
-                        <div class="category-card-label">
-                            <h3>Takım</h3><small>Koleksiyonu Gör <i class="bi bi-arrow-right"></i></small>
-                        </div>
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">03</span>
+                        <h3>Takım</h3>
+                        <i class="bi bi-arrow-right"></i>
                     </div>
                 </a>
             </div>
@@ -75,13 +81,13 @@
 </section>
 
 <section class="py-5 bg-light-kw">
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-end mb-4 reveal">
+    <div class="container" style="padding-top:4rem;padding-bottom:4.5rem">
+        <div class="d-flex justify-content-between align-items-end mb-5 reveal">
             <div>
                 <p class="section-tag">Seçili Ürünler</p>
-                <h2 class="section-title mb-0">Öne Çıkanlar</h2>
+                <h2 class="section-title mb-0">Öne <em>çıkanlar</em></h2>
             </div>
-            <a asp-controller="Product" asp-action="Index" class="d-none d-md-block" style="font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
+            <a asp-controller="Product" asp-action="Index" class="link-quiet d-none d-md-inline-flex">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
         </div>
         @{
             var fp = ViewBag.FeaturedProducts as IEnumerable<KedWear.Core.Entities.Product> ?? Enumerable.Empty<KedWear.Core.Entities.Product>();
@@ -100,11 +106,11 @@
                                 else
                                 {
                                     <div style="width:100%;height:100%;background:var(--kw-light);display:flex;align-items:center;justify-content:center">
-                                        <i class="bi bi-image" style="font-size:2rem;color:#ccc"></i>
+                                        <i class="bi bi-image" style="font-size:2rem;color:var(--kw-gray-2)"></i>
                                     </div>
                                 }
                                 <div class="product-card-overlay">
-                                    <span class="btn-kw-dark" style="font-size:.72rem;padding:.6rem 1.4rem">Ürünü İncele</span>
+                                    <span class="btn-kw-dark" style="font-size:.68rem;padding:.7rem 1.4rem">Ürünü İncele</span>
                                 </div>
                                 @if (product.IsOnSale) { <span class="product-badge product-badge-sale">İndirim</span> }
                             </div>
@@ -125,25 +131,37 @@
                 </div>
             }
         </div>
+        <div class="text-center mt-4 d-md-none reveal">
+            <a asp-controller="Product" asp-action="Index" class="link-quiet">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
+        </div>
     </div>
 </section>
 
-<section class="py-5 bg-white">
-    <div class="container py-4">
-        <div class="row g-4 text-center">
-            <div class="col-6 col-md-3 reveal">
+<section class="manifesto text-center">
+    <div class="container" style="padding-top:5.5rem;padding-bottom:5.5rem">
+        <div class="reveal">
+            <blockquote>
+                "Her parça bir yol hikayesi anlatır."
+                <span class="manifesto-source">KedWear Atölyesi</span>
+            </blockquote>
+        </div>
+
+        <hr class="my-5 mx-auto" style="max-width:80px;border-color:var(--kw-border);opacity:1" />
+
+        <div class="row g-4 text-center reveal">
+            <div class="col-6 col-md-3">
                 <div class="stat-counter"><span data-counter="1200" data-counter-suffix="+">0</span></div>
                 <div class="stat-label">Mutlu Müşteri</div>
             </div>
-            <div class="col-6 col-md-3 reveal" style="transition-delay:.06s">
+            <div class="col-6 col-md-3">
                 <div class="stat-counter"><span data-counter="81" data-counter-suffix="+">0</span></div>
                 <div class="stat-label">Şehre Kargo</div>
             </div>
-            <div class="col-6 col-md-3 reveal" style="transition-delay:.12s">
+            <div class="col-6 col-md-3">
                 <div class="stat-counter"><span data-counter="50" data-counter-suffix="+">0</span></div>
                 <div class="stat-label">Ürün Çeşidi</div>
             </div>
-            <div class="col-6 col-md-3 reveal" style="transition-delay:.18s">
+            <div class="col-6 col-md-3">
                 <div class="stat-counter"><span data-counter="100" data-counter-suffix="%">0</span></div>
                 <div class="stat-label">Güvenli Ödeme</div>
             </div>
