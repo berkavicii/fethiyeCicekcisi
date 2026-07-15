@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/KedWear.Web.props" />
-</Project>
