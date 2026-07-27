@@ -1,0 +1,59 @@
+@model IEnumerable<FethiyeCicekcisi.Core.Entities.Occasion>
+@{
+    ViewData["Title"] = "Özel Günler";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var occasions = Model;
+}
+
+<div class="d-flex justify-content-end mb-4">
+    <a href="/admin/ozel-gunler/ekle" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Yeni Özel Gün
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:.87rem">
+            <thead>
+                <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+                    <th class="ps-3 py-3">Özel Gün Adı</th>
+                    <th class="py-3">Slug</th>
+                    <th class="py-3">Durum</th>
+                    <th class="py-3">Sıra</th>
+                    <th class="py-3">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var occasion in occasions)
+                {
+                    <tr>
+                        <td class="ps-3 py-3 fw-500">@occasion.Name</td>
+                        <td class="py-3 text-muted">@occasion.Slug</td>
+                        <td class="py-3">
+                            <span class="status-badge @(occasion.IsActive ? "status-delivered" : "status-cancelled")">
+                                @(occasion.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="py-3 text-muted">@occasion.DisplayOrder</td>
+                        <td class="py-3">
+                            <div class="d-flex gap-2">
+                                <a href="/admin/ozel-gunler/duzenle/@occasion.Id" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="/admin/ozel-gunler/sil/@occasion.Id" method="post"
+                                      onsubmit="return confirm('Özel günü silmek istediğinize emin misiniz?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>

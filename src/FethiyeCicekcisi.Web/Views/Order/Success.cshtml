@@ -1,0 +1,46 @@
+@using FethiyeCicekcisi.Core.Enums
+@model FethiyeCicekcisi.Core.Entities.Order
+@{
+    ViewData["Title"] = "Ödeme Başarılı";
+}
+
+<div class="container py-5 text-center" style="max-width:600px">
+    <div class="mb-4 success-bloom">🌸</div>
+    <h2 class="section-title mb-2">Teşekkürler!</h2>
+    <p class="text-muted mb-3">Siparişiniz alındı. Sipariş numaranız:</p>
+    <div class="mb-4 mx-auto" style="max-width:340px;border:1px dashed var(--kw-accent);border-radius:var(--radius-md);padding:.85rem 1rem;font-family:monospace;font-size:1.25rem;font-weight:600;letter-spacing:.1em;color:var(--kw-ink);background:var(--kw-accent-soft)">
+        @Model.OrderNumber
+    </div>
+
+    <div class="order-summary-box text-start mb-4">
+        @foreach (var item in Model.Items)
+        {
+            <div class="d-flex justify-content-between mb-2" style="font-size:.88rem">
+                <span>@item.ProductName <small class="text-muted">× @item.Quantity</small></span>
+                <span>@item.TotalPrice.ToString("N2") ₺</span>
+            </div>
+        }
+        <hr />
+        <div class="d-flex justify-content-between mb-2" style="font-size:.88rem">
+            <span>Teslimat</span>
+            <span>@Model.DeliveryDate.ToString("dd.MM.yyyy") — @Model.DeliveryTimeSlot.ToDisplayName()</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <strong>Toplam</strong>
+            <strong>@Model.TotalAmount.ToString("N2") ₺</strong>
+        </div>
+    </div>
+
+    <p class="text-muted mb-4" style="font-size:.85rem">
+        Sipariş numaranızı not alın — sipariş özeti e-posta adresinize de gönderildi.
+        Sorularınızda bu numarayla bize ulaşabilirsiniz.
+    </p>
+
+    <div class="d-flex gap-3 justify-content-center">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a asp-controller="Order" asp-action="MyOrders" class="btn-kw-outline">Siparişlerim</a>
+        }
+        <a asp-controller="Home" asp-action="Index" class="btn-kw-dark">Ana Sayfaya Dön</a>
+    </div>
+</div>

@@ -1,0 +1,66 @@
+@model IEnumerable<FethiyeCicekcisi.Core.Entities.DeliveryZone>
+@{
+    ViewData["Title"] = "Teslimat Bölgeleri";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-end mb-4">
+    <a href="/admin/bolgeler/ekle" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Yeni Bölge
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:.87rem">
+            <thead>
+                <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+                    <th class="ps-3 py-3">İl</th>
+                    <th class="py-3">İlçe/Semt/Bölge</th>
+                    <th class="py-3">Yol Ücreti</th>
+                    <th class="py-3">Sıra</th>
+                    <th class="py-3">Durum</th>
+                    <th class="py-3">Seçenekler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var zone in Model)
+                {
+                    <tr class="@(zone.IsActive ? "" : "table-secondary")">
+                        <td class="ps-3 py-3">@zone.City</td>
+                        <td class="py-3 fw-500">@zone.Name</td>
+                        <td class="py-3">@zone.Fee.ToString("N0") TL ek yol ücreti alınır</td>
+                        <td class="py-3 text-muted">@zone.DisplayOrder</td>
+                        <td class="py-3">
+                            <span class="status-badge @(zone.IsActive ? "status-delivered" : "status-cancelled")">
+                                @(zone.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            <div class="d-flex gap-2">
+                                <a href="/admin/bolgeler/duzenle/@zone.Id" class="btn btn-sm btn-outline-dark" title="Düzenle">
+                                    <i class="bi bi-pencil"></i> Düzenle
+                                </a>
+                                <form action="/admin/bolgeler/pasif/@zone.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Sitede gizle/göster">
+                                        <i class="bi bi-eye-slash"></i> @(zone.IsActive ? "Geçici Olarak Sil" : "Aktifleştir")
+                                    </button>
+                                </form>
+                                <form action="/admin/bolgeler/sil/@zone.Id" method="post"
+                                      onsubmit="return confirm('Bölgeyi kalıcı olarak silmek istediğinize emin misiniz?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Kalıcı sil">
+                                        <i class="bi bi-x-lg"></i> Kalıcı Sil
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>

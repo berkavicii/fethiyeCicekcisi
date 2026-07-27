@@ -1,0 +1,38 @@
+@model FethiyeCicekcisi.Web.ViewModels.Order.OrderSummaryViewModel
+@{
+    ViewData["Title"] = "Ödeme (Test Modu)";
+    Layout = "_Layout";
+}
+
+<div class="container py-5" style="max-width:520px">
+    <div class="alert alert-warning">
+        <strong>Test Modu</strong> — Bu ekran gerçek bir ödeme sağlayıcısına bağlanmıyor. Kart bilgileri gösterim amaçlıdır, hiçbir yere gönderilmez ve para çekilmez.
+    </div>
+
+    <h2 class="section-title mb-2">Güvenli Ödeme</h2>
+    <p class="text-muted mb-4">Sipariş No: <strong>@Model.Order.OrderNumber</strong> | Toplam: <strong>@Model.Order.TotalAmount.ToString("N2") ₺</strong></p>
+
+    <div class="border rounded p-4 mb-4">
+        <div class="mb-3">
+            <label class="form-label">Kart Numarası</label>
+            <input type="text" class="form-control" value="4543 6045 0000 0006" readonly>
+            <div class="form-text">Test kartı (iyzico test kartlarıyla aynı formatta) — sadece görsel amaçlıdır.</div>
+        </div>
+        <div class="row">
+            <div class="col-6 mb-3">
+                <label class="form-label">Son Kullanma</label>
+                <input type="text" class="form-control" value="12/30" readonly>
+            </div>
+            <div class="col-6 mb-3">
+                <label class="form-label">CVV</label>
+                <input type="text" class="form-control" value="123" readonly>
+            </div>
+        </div>
+    </div>
+
+    <form asp-controller="Order" asp-action="SimulatePaymentResult" method="post" class="d-grid gap-2">
+        <input type="hidden" name="orderNumber" value="@Model.Order.OrderNumber" />
+        <button type="submit" name="approve" value="true" class="btn-kw">Ödemeyi Onayla (Test)</button>
+        <button type="submit" name="approve" value="false" class="btn-kw-outline">Ödemeyi Reddet (Test)</button>
+    </form>
+</div>

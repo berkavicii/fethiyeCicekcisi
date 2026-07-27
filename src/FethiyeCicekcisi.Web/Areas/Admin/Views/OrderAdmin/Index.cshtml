@@ -1,0 +1,74 @@
+@model FethiyeCicekcisi.Web.ViewModels.Admin.AdminOrderListViewModel
+@{
+    ViewData["Title"] = "Siparişler";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- Status filter tabs -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    @{
+        var statuses = new[] { ("", "Tümü"), ("Processing", "Hazırlanıyor"), ("Shipped", "Kargoda"), ("Delivered", "Teslim"), ("Cancelled", "İptal") };
+    }
+    @foreach (var (val, label) in statuses)
+    {
+        <a href="/admin/siparisler?durum=@val"
+           class="btn btn-sm @(Model.StatusFilter == val ? "btn-dark" : "btn-outline-secondary")">
+            @label
+        </a>
+    }
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:.85rem">
+            <thead>
+                <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+                    <th class="ps-3 py-3">Sipariş No</th>
+                    <th class="py-3">Müşteri</th>
+                    <th class="py-3">Tarih</th>
+                    <th class="py-3">Tutar</th>
+                    <th class="py-3">Durum</th>
+                    <th class="py-3">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.Orders)
+                {
+                    <tr>
+                        <td class="ps-3 py-3"><strong>@order.OrderNumber</strong></td>
+                        <td class="py-3">
+                            @(order.User?.FullName ?? order.RecipientFirstName + " " + order.RecipientLastName)
+                            <br /><small class="text-muted">@order.GuestEmail</small>
+                        </td>
+                        <td class="py-3 text-muted">@order.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td class="py-3 fw-500">@order.TotalAmount.ToString("N2") ₺</td>
+                        <td class="py-3">
+                            <span class="status-badge status-@order.Status.ToString().ToLower()">@order.Status.ToDisplayName()</span>
+                        </td>
+                        <td class="py-3">
+                            <a href="/admin/siparisler/detay/@order.Id" class="btn btn-sm btn-outline-dark">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-4 d-flex justify-content-center">
+        <ul class="pagination pagination-sm">
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="/admin/siparisler?page=@i&durum=@Model.StatusFilter">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

@@ -1,0 +1,74 @@
+@using FethiyeCicekcisi.Core.Enums
+@model IEnumerable<FethiyeCicekcisi.Core.Entities.PromoCode>
+@{
+    ViewData["Title"] = "Promosyon Kodları";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="text-center mb-4">
+    <a href="/admin/promosyon-kodlari/ekle" class="btn btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Yeni Promosyon Kodu Oluştur
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 text-center" style="font-size:.87rem">
+            <thead>
+                <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
+                    <th class="py-3">Promosyon Kodu</th>
+                    <th class="py-3">İndirim Türü</th>
+                    <th class="py-3">İndirim Miktarı</th>
+                    <th class="py-3">Oluşturma Tarihi</th>
+                    <th class="py-3">Durum</th>
+                    <th class="py-3">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var promo in Model)
+                {
+                    <tr>
+                        <td class="py-3 fw-600" style="font-family:monospace;letter-spacing:.08em;color:#4a5fc1">@promo.Code</td>
+                        <td class="py-3">
+                            @if (promo.DiscountType == PromoDiscountType.Percent)
+                            {
+                                <span class="badge rounded-pill text-dark" style="background:#f5c451;font-size:.72rem;padding:.45em 1em">Yüzde İndirim</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill text-white" style="background:#31b0d5;font-size:.72rem;padding:.45em 1em">$ Sabit Fiyat</span>
+                            }
+                        </td>
+                        <td class="py-3 fw-600" style="color:#28a745">
+                            @(promo.DiscountType == PromoDiscountType.Percent
+                                ? $"{promo.Amount:0.##} %"
+                                : $"{promo.Amount:0.##} TL")
+                        </td>
+                        <td class="py-3 text-muted"><i class="bi bi-calendar3 me-1"></i>@promo.CreatedAt.ToString("dd.MM.yyyy")</td>
+                        <td class="py-3">
+                            <span class="status-badge @(promo.IsActive ? "status-delivered" : "status-cancelled")">
+                                @(promo.IsActive ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            <div class="d-flex gap-2 justify-content-center">
+                                <a href="/admin/promosyon-kodlari/duzenle/@promo.Id" class="btn btn-sm btn-warning" title="Düzenle">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <form action="/admin/promosyon-kodlari/sil/@promo.Id" method="post"
+                                      onsubmit="return confirm('Promosyon kodunu silmek istediğinize emin misiniz?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Sil">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>

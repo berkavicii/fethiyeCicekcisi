@@ -1,0 +1,52 @@
+@model FethiyeCicekcisi.Web.ViewModels.Account.RegisterViewModel
+@{
+    ViewData["Title"] = "Kayıt Ol";
+}
+
+<div class="container py-5" style="max-width:440px">
+    <h1 class="section-title mb-2 text-center">Kayıt Ol</h1>
+    <p class="text-muted text-center mb-5" style="font-size:.88rem">Yeni hesap oluşturun</p>
+
+    <form asp-controller="Account" asp-action="Register" method="post">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" style="font-size:.85rem"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="FirstName" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
+                <input asp-for="FirstName" class="form-control form-control-kw" autocomplete="given-name" />
+                <span asp-validation-for="FirstName" class="text-danger" style="font-size:.78rem"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="LastName" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
+                <input asp-for="LastName" class="form-control form-control-kw" autocomplete="family-name" />
+                <span asp-validation-for="LastName" class="text-danger" style="font-size:.78rem"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Email" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
+                <input asp-for="Email" class="form-control form-control-kw" type="email" autocomplete="email" />
+                <span asp-validation-for="Email" class="text-danger" style="font-size:.78rem"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Password" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
+                <input asp-for="Password" class="form-control form-control-kw" type="password" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="text-danger" style="font-size:.78rem"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="ConfirmPassword" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
+                <input asp-for="ConfirmPassword" class="form-control form-control-kw" type="password" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger" style="font-size:.78rem"></span>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-kw-dark w-100 border-0 mt-4">Hesap Oluştur</button>
+    </form>
+
+    <p class="text-center mt-4 text-muted" style="font-size:.85rem">
+        Zaten hesabınız var mı?
+        <a asp-controller="Account" asp-action="Login">Giriş Yap</a>
+    </p>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

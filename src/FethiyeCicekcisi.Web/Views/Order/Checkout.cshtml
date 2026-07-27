@@ -1,0 +1,253 @@
+@using FethiyeCicekcisi.Core.Enums
+@model FethiyeCicekcisi.Web.ViewModels.Order.CheckoutViewModel
+@{
+    ViewData["Title"] = "Ödeme";
+    var minDateAttr = Model.MinDeliveryDate.ToString("yyyy-MM-dd");
+}
+
+<div class="container py-5">
+    <p class="section-tag mb-2">Son Adım</p>
+    <h1 class="section-title mb-2">Siparişi <em>tamamla</em></h1>
+    <p class="text-muted mb-5" style="font-size:.88rem">Üyelik gerekmez — bilgilerinizi doldurun, sipariş numaranız e-postanıza gönderilsin.</p>
+
+    <form asp-controller="Order" asp-action="Checkout" method="post">
+        @Html.AntiForgeryToken()
+        <div class="row g-5">
+            <div class="col-lg-7">
+                <!-- Gönderen -->
+                <div class="checkout-block reveal">
+                    <h5 class="checkout-block-title"><span class="checkout-step">01</span> Bilgileriniz <small class="text-muted" style="font-size:.72rem">(siparişi veren)</small></h5>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="SenderName" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="SenderName" class="form-control form-control-kw" />
+                            <span asp-validation-for="SenderName" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="SenderPhone" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="SenderPhone" class="form-control form-control-kw" />
+                            <span asp-validation-for="SenderPhone" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="SenderEmail" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="SenderEmail" class="form-control form-control-kw" type="email" />
+                            <span asp-validation-for="SenderEmail" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input asp-for="IsAnonymousSender" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsAnonymousSender" class="form-check-label" style="font-size:.85rem">
+                                    Gönderen bilgim gizli kalsın
+                                    <small class="text-muted d-block" style="font-size:.75rem">Adınız kartta ve teslimatta alıcıya gösterilmez.</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alıcı -->
+                <div class="checkout-block reveal">
+                    <h5 class="checkout-block-title"><span class="checkout-step">02</span> Alıcı Bilgileri <small class="text-muted" style="font-size:.72rem">(çiçeğin teslim edileceği kişi)</small></h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="RecipientFirstName" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="RecipientFirstName" class="form-control form-control-kw" />
+                            <span asp-validation-for="RecipientFirstName" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="RecipientLastName" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="RecipientLastName" class="form-control form-control-kw" />
+                            <span asp-validation-for="RecipientLastName" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="RecipientPhone" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="RecipientPhone" class="form-control form-control-kw" />
+                            <span asp-validation-for="RecipientPhone" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="DeliveryZoneId" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <select asp-for="DeliveryZoneId" id="zoneSelect" class="form-select form-control-kw">
+                                <option value="">Bölge seçiniz...</option>
+                                @foreach (var zone in Model.Zones)
+                                {
+                                    <option value="@zone.Id" data-fee="@zone.Fee.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                        @zone.City — @zone.Name (+@zone.Fee.ToString("N0") ₺)
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="DeliveryZoneId" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="RecipientAddressLine1" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="RecipientAddressLine1" class="form-control form-control-kw" placeholder="Mahalle, sokak, no, daire..." />
+                            <span asp-validation-for="RecipientAddressLine1" class="text-danger" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="RecipientAddressLine2" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="RecipientAddressLine2" class="form-control form-control-kw" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teslimat -->
+                <div class="checkout-block reveal">
+                    <h5 class="checkout-block-title"><span class="checkout-step">03</span> Teslimat &amp; Kart Notu</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="DeliveryDate" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <input asp-for="DeliveryDate" asp-format="{0:yyyy-MM-dd}" type="date" min="@minDateAttr" class="form-control form-control-kw" />
+                            <small class="text-muted" style="font-size:.75rem">
+                                @(Model.MinDeliveryDate == DateOnly.FromDateTime(DateTime.Now)
+                                    ? "Sepetinizdeki ürünler aynı gün teslimata uygun. 🌸"
+                                    : "Sepetinizdeki ürünler için en erken teslimat yarın.")
+                            </small>
+                            <span asp-validation-for="DeliveryDate" class="text-danger d-block" style="font-size:.78rem"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="DeliveryTimeSlot" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <select asp-for="DeliveryTimeSlot" class="form-select form-control-kw">
+                                <option value="0">Saat aralığı seçiniz...</option>
+                                <option value="1">13:00 – 17:00</option>
+                                <option value="2">17:00 – 21:00</option>
+                            </select>
+                            <span asp-validation-for="DeliveryTimeSlot" class="text-danger d-block" style="font-size:.78rem"></span>
+                        </div>
+                        @if (Model.AnyItemAllowsMessageCard)
+                        {
+                            <div class="col-12">
+                                <label asp-for="CardMessage" class="form-label fw-500" style="font-size:.82rem"></label>
+                                <textarea asp-for="CardMessage" class="form-control form-control-kw card-message-input" rows="3" maxlength="200"
+                                          placeholder="&quot;İyi ki varsın...&quot; — çiçekle birlikte gönderilecek not (boş bırakılabilir)"></textarea>
+                                <small class="text-muted" style="font-size:.75rem"><span id="cardMsgCount">0</span>/200 karakter</small>
+                                <span asp-validation-for="CardMessage" class="text-danger d-block" style="font-size:.78rem"></span>
+                            </div>
+                        }
+                        <div class="col-12">
+                            <label asp-for="Notes" class="form-label fw-500" style="font-size:.82rem"></label>
+                            <textarea asp-for="Notes" class="form-control form-control-kw" rows="2"
+                                      placeholder="Adres tarifi, kapı kodu vb."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="col-lg-5">
+                <div class="order-summary-box reveal">
+                    <h5 class="mb-4" style="font-family:var(--font-serif)">Sipariş Özeti</h5>
+                    @foreach (var item in Model.CartItems)
+                    {
+                        <div class="d-flex gap-3 mb-3">
+                            <img src="@(item.Product?.MainImageUrl ?? "/images/products/placeholder.jpg")"
+                                 style="width:60px;height:75px;object-fit:cover;background:var(--kw-light);border-radius:var(--radius-sm)" alt="@item.Product?.Name"
+                                 onerror="this.src='/images/products/placeholder.jpg'" />
+                            <div class="flex-grow-1">
+                                <div style="font-size:.85rem;font-weight:500">@item.Product?.Name</div>
+                                @if (!string.IsNullOrEmpty(item.ProductVariant?.Size))
+                                {
+                                    <small class="text-muted">@item.ProductVariant.Size</small>
+                                }
+                                <div class="d-flex justify-content-between mt-1">
+                                    <small class="text-muted">× @item.Quantity</small>
+                                    <small class="fw-500">@item.TotalPrice.ToString("N2") ₺</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    <hr />
+
+                    <!-- Promosyon kodu -->
+                    <div class="mb-3">
+                        <label asp-for="PromoCode" class="form-label fw-500" style="font-size:.82rem"></label>
+                        <div class="input-group">
+                            <input asp-for="PromoCode" class="form-control form-control-kw" placeholder="Kodunuz varsa girin"
+                                   style="text-transform:uppercase;font-family:monospace" />
+                            <button type="button" class="btn btn-outline-dark" id="promoCheckBtn" style="font-size:.78rem">Uygula</button>
+                        </div>
+                        <small id="promoMsg" class="d-block mt-1" style="font-size:.78rem"></small>
+                        <span asp-validation-for="PromoCode" class="text-danger d-block" style="font-size:.78rem"></span>
+                    </div>
+                    <hr />
+
+                    <div class="d-flex justify-content-between mb-2" style="font-size:.9rem">
+                        <span>Ara Toplam</span>
+                        <span id="sumSubtotal" data-value="@Model.SubTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)">@Model.SubTotal.ToString("N2") ₺</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size:.9rem">
+                        <span>Teslimat (bölge)</span>
+                        <span id="sumShipping">Bölge seçiniz</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3" style="font-size:.9rem;display:none!important" id="discountRow">
+                        <span style="color:var(--kw-sage)">İndirim</span>
+                        <span id="sumDiscount" style="color:var(--kw-sage)">−0,00 ₺</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="fw-600">Toplam</span>
+                        <span class="fw-600" id="sumTotal">@Model.SubTotal.ToString("N2") ₺</span>
+                    </div>
+
+                    <button type="submit" class="btn-kw-dark d-block w-100 border-0">
+                        Ödeme Yap
+                    </button>
+                    <p class="text-muted text-center mt-3" style="font-size:.75rem">
+                        <i class="bi bi-lock me-1"></i> Güvenli ödeme PayTR ile sağlanmaktadır.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Kart mesajı karakter sayacı
+        (function () {
+            const textarea = document.getElementById('CardMessage');
+            const counter = document.getElementById('cardMsgCount');
+            if (!textarea || !counter) return;
+            const update = () => counter.textContent = textarea.value.length;
+            textarea.addEventListener('input', update);
+            update();
+        })();
+
+        // Bölge ücreti + promosyon indirimi ile canlı toplam.
+        // Görsel önizlemedir; asıl tutar her zaman sunucuda yeniden hesaplanır.
+        (function () {
+            const subTotal = parseFloat(document.getElementById('sumSubtotal').dataset.value) || 0;
+            const zoneSelect = document.getElementById('zoneSelect');
+            let discount = 0;
+
+            const fmt = v => v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+            function refresh() {
+                const opt = zoneSelect.options[zoneSelect.selectedIndex];
+                const fee = opt && opt.dataset.fee ? parseFloat(opt.dataset.fee) : 0;
+                document.getElementById('sumShipping').textContent = opt && opt.value ? fmt(fee) : 'Bölge seçiniz';
+                const row = document.getElementById('discountRow');
+                row.style.setProperty('display', discount > 0 ? 'flex' : 'none', 'important');
+                document.getElementById('sumDiscount').textContent = '−' + fmt(discount);
+                document.getElementById('sumTotal').textContent = fmt(Math.max(0, subTotal + fee - discount));
+            }
+
+            zoneSelect.addEventListener('change', refresh);
+
+            document.getElementById('promoCheckBtn').addEventListener('click', async function () {
+                const code = document.getElementById('PromoCode').value.trim();
+                const msg = document.getElementById('promoMsg');
+                if (!code) { discount = 0; msg.textContent = ''; refresh(); return; }
+                try {
+                    const res = await fetch('/siparis/promo-kontrol?kod=' + encodeURIComponent(code));
+                    const data = await res.json();
+                    discount = data.valid ? data.discount : 0;
+                    msg.textContent = data.message;
+                    msg.style.color = data.valid ? 'var(--kw-sage)' : 'var(--kw-accent-dark)';
+                } catch { discount = 0; msg.textContent = 'Kod kontrol edilemedi.'; }
+                refresh();
+            });
+
+            refresh();
+        })();
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

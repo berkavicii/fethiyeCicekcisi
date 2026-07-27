@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\FethiyeCicekcisi.Application\FethiyeCicekcisi.Application.csproj" />
+    <ProjectReference Include="..\FethiyeCicekcisi.Infrastructure\FethiyeCicekcisi.Infrastructure.csproj" />
+    <ProjectReference Include="..\FethiyeCicekcisi.Core\FethiyeCicekcisi.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>b003bd65-5e1f-4e49-865c-77dd1564f335</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

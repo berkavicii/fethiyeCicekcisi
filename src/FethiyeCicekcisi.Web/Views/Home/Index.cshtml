@@ -1,0 +1,224 @@
+@{
+    ViewData["Title"] = "Yonca Çiçekçilik – Aynı Gün Çiçek Teslimatı";
+    Layout = "_Layout";
+}
+
+<section class="hero-section">
+    <!-- Crossfading background layers -->
+    <div class="hero-bg">
+        <div class="hero-bg-layer" style="background-image:url('https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1600&q=80')"></div>
+        <div class="hero-bg-layer" style="background-image:url('https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1600&q=80')"></div>
+        <div class="hero-bg-layer" style="background-image:url('https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1600&q=80')"></div>
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="container position-relative" style="z-index:2">
+        <div class="row">
+            <div class="col-lg-8 col-xl-7">
+                <span class="hero-tag hero-rise" style="--rise-i:0">Fethiye'nin Çiçek Atölyesi</span>
+                <h1 class="mb-4 hero-rise" style="--rise-i:1">Her buket<br>bir <em>duygu</em><br>taşır.</h1>
+                <p class="hero-sub mb-5 hero-rise" style="--rise-i:2">Mevsimin en taze çiçekleri, el bağlaması buketler ve özenle hazırlanan aranjmanlar — Fethiye içi aynı gün kapıda.</p>
+                <div class="d-flex flex-wrap gap-3 hero-rise" style="--rise-i:3">
+                    <a asp-controller="Product" asp-action="Index" class="btn-kw-dark">Çiçek Gönder</a>
+                    <a asp-controller="Product" asp-action="Category" asp-route-slug="buketler" class="btn-kw-outline-light">Buketler</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="#kategoriler" class="scroll-indicator">
+        Keşfet
+        <i class="bi bi-chevron-down"></i>
+    </a>
+</section>
+
+<!-- Kayan şerit -->
+<div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+        @for (int m = 0; m < 2; m++)
+        {
+            <span class="marquee-item">Aynı Gün Teslimat</span><span class="marquee-dot">✿</span>
+            <span class="marquee-item">Taze Mevsim Çiçekleri</span><span class="marquee-dot">✿</span>
+            <span class="marquee-item">El Bağlaması Buketler</span><span class="marquee-dot">✿</span>
+            <span class="marquee-item">Not Kartı Hediye</span><span class="marquee-dot">✿</span>
+            <span class="marquee-item">Gizli Gönderen Seçeneği</span><span class="marquee-dot">✿</span>
+            <span class="marquee-item">Fethiye &amp; Çevresi</span><span class="marquee-dot">✿</span>
+        }
+    </div>
+</div>
+
+<!-- Özel günler -->
+<section class="py-5 bg-white">
+    <div class="container text-center" style="padding-top:3.5rem;padding-bottom:3rem">
+        <div class="reveal">
+            <p class="section-tag">Bir sebep var mı?</p>
+            <h2 class="section-title mb-4">Hangi <em>gün</em> için?</h2>
+        </div>
+        <div class="d-flex flex-wrap justify-content-center gap-2 reveal">
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="sevgililer-gunu" class="occasion-chip occasion-chip-lg">Sevgililer Günü</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="anneler-gunu" class="occasion-chip occasion-chip-lg">Anneler Günü</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="dogum-gunu" class="occasion-chip occasion-chip-lg">Doğum Günü</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="gecmis-olsun" class="occasion-chip occasion-chip-lg">Geçmiş Olsun</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="yeni-is" class="occasion-chip occasion-chip-lg">Yeni İş</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="kadinlar-gunu" class="occasion-chip occasion-chip-lg">Kadınlar Günü</a>
+            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="ogretmenler-gunu" class="occasion-chip occasion-chip-lg">Öğretmenler Günü</a>
+        </div>
+    </div>
+</section>
+
+<!-- Kategoriler — kemer formlu kartlar -->
+<section class="py-5 bg-beige" id="kategoriler">
+    <div class="container" style="padding-top:4rem;padding-bottom:4.5rem">
+        <div class="text-center mb-5 reveal">
+            <p class="section-tag">Koleksiyon</p>
+            <h2 class="section-title">Atölyeden <em>seçmeler</em></h2>
+        </div>
+        <div class="row g-4 g-lg-5">
+            <div class="col-md-4 reveal">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="buketler" class="collection-card">
+                    <div class="collection-card-media collection-card-arch">
+                        <img src="https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&q=80"
+                             alt="Buketler" loading="lazy" />
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">01</span>
+                        <h3>Buketler</h3>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4 reveal" style="transition-delay:.1s">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="orkideler" class="collection-card">
+                    <div class="collection-card-media collection-card-arch">
+                        <img src="https://images.unsplash.com/photo-1524598171347-abf62dfd6694?w=800&q=80"
+                             alt="Orkideler" loading="lazy" />
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">02</span>
+                        <h3>Orkideler</h3>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4 reveal" style="transition-delay:.2s">
+                <a asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar" class="collection-card">
+                    <div class="collection-card-media collection-card-arch">
+                        <img src="https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=800&q=80"
+                             alt="Aranjmanlar" loading="lazy" />
+                    </div>
+                    <div class="collection-card-caption">
+                        <span class="collection-index">03</span>
+                        <h3>Aranjmanlar</h3>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Öne çıkanlar -->
+<section class="py-5 bg-light-kw">
+    <div class="container" style="padding-top:4rem;padding-bottom:4.5rem">
+        <div class="d-flex justify-content-between align-items-end mb-5 reveal">
+            <div>
+                <p class="section-tag">Seçili Tasarımlar</p>
+                <h2 class="section-title mb-0">Öne <em>çıkanlar</em></h2>
+            </div>
+            <a asp-controller="Product" asp-action="Index" class="link-quiet d-none d-md-inline-flex">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
+        </div>
+        @{
+            var fp = ViewBag.FeaturedProducts as IEnumerable<FethiyeCicekcisi.Core.Entities.Product> ?? Enumerable.Empty<FethiyeCicekcisi.Core.Entities.Product>();
+        }
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-lg-4">
+            @foreach (var product in fp)
+            {
+                <div class="col reveal">
+                    <a asp-controller="Product" asp-action="Detail" asp-route-slug="@product.Slug" class="d-block">
+                        <div class="product-card">
+                            <div class="product-card-image">
+                                @if (!string.IsNullOrEmpty(product.MainImageUrl))
+                                {
+                                    <img src="@product.MainImageUrl" alt="@product.Name" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <div style="width:100%;height:100%;background:var(--kw-light);display:flex;align-items:center;justify-content:center">
+                                        <i class="bi bi-flower1" style="font-size:2rem;color:var(--kw-gray-2)"></i>
+                                    </div>
+                                }
+                                <div class="product-card-overlay">
+                                    <span class="btn-kw-dark" style="font-size:.68rem;padding:.7rem 1.4rem">İncele</span>
+                                </div>
+                                @if (product.IsOnSale)
+                                {
+                                    <span class="product-badge product-badge-sale">İndirim</span>
+                                }
+                                else if (product.IsSameDayDelivery)
+                                {
+                                    <span class="product-badge">Aynı Gün</span>
+                                }
+                            </div>
+                            <div class="product-card-body">
+                                <div class="product-category">@product.Category?.Name</div>
+                                <div class="product-name" title="@product.Name">@product.Name</div>
+                                <div class="mt-1">
+                                    @if (product.IsOnSale)
+                                    {
+                                        <span class="product-price-original">@product.Price.ToString("N2") ₺</span>
+                                        <span class="product-price product-price-sale">@product.CurrentPrice.ToString("N2") ₺</span>
+                                    }
+                                    else { <span class="product-price">@product.Price.ToString("N2") ₺</span> }
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+        <div class="text-center mt-4 d-md-none reveal">
+            <a asp-controller="Product" asp-action="Index" class="link-quiet">Tümünü Gör <i class="bi bi-arrow-right"></i></a>
+        </div>
+    </div>
+</section>
+
+<!-- Aynı gün teslimat bandı -->
+<section class="delivery-band">
+    <div class="container text-center reveal" style="padding-top:4rem;padding-bottom:4rem">
+        <i class="bi bi-lightning-charge d-block mb-3" style="font-size:1.6rem;color:var(--kw-accent)"></i>
+        <h2 class="section-title mb-3" style="color:var(--kw-white)">Saat 16:00'ya kadar sipariş ver,<br><em>bugün</em> teslim edelim.</h2>
+        <p class="mb-4 mx-auto" style="max-width:460px;color:rgba(255,253,249,.7);font-size:.92rem;font-weight:300">Fethiye ve çevresinde aynı gün teslimat. Dilersen teslimat saatini de sen seç.</p>
+        <a asp-controller="Product" asp-action="Index" class="btn-kw-outline-light">Hemen Sipariş Ver</a>
+    </div>
+</section>
+
+<!-- Manifesto + istatistikler -->
+<section class="manifesto text-center">
+    <div class="container" style="padding-top:5.5rem;padding-bottom:5.5rem">
+        <div class="reveal">
+            <blockquote>
+                "Çiçek, söze dökülemeyeni söyler."
+                <span class="manifesto-source">Yonca Çiçekçilik Atölyesi</span>
+            </blockquote>
+        </div>
+
+        <hr class="my-5 mx-auto" style="max-width:80px;border-color:var(--kw-border);opacity:1" />
+
+        <div class="row g-4 text-center reveal">
+            <div class="col-6 col-md-3">
+                <div class="stat-counter"><span data-counter="5000" data-counter-suffix="+">0</span></div>
+                <div class="stat-label">Teslim Edilen Buket</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter"><span data-counter="15" data-counter-suffix="+">0</span></div>
+                <div class="stat-label">Yıllık Deneyim</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter"><span data-counter="7" data-counter-suffix="/7">0</span></div>
+                <div class="stat-label">Gün Taze Çiçek</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter"><span data-counter="100" data-counter-suffix="%">0</span></div>
+                <div class="stat-label">Güvenli Ödeme</div>
+            </div>
+        </div>
+    </div>
+</section>

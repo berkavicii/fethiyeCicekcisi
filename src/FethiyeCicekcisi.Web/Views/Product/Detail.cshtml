@@ -1,0 +1,274 @@
+@model FethiyeCicekcisi.Web.ViewModels.Product.ProductDetailViewModel
+@{
+    ViewData["Title"] = Model.Product.Name;
+    var product = Model.Product;
+    var options = product.Variants.Where(v => v.IsActive && !string.IsNullOrEmpty(v.Size))
+                                  .Select(v => v.Size).Distinct().ToList();
+    var images = product.Images.OrderBy(i => i.DisplayOrder).ToList();
+    var mainImage = images.FirstOrDefault(i => i.IsMain) ?? images.FirstOrDefault();
+    var isPurchasable = product.Variants.Any(v => v.IsActive && v.StockQuantity > 0);
+    var occasions = product.ProductOccasions.Select(po => po.Occasion).Where(o => o.IsActive && !o.IsDeleted).ToList();
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="font-size:.8rem">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Ana Sayfa</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Product" asp-action="Index">Çiçekler</a></li>
+            @if (product.Category != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-controller="Product" asp-action="Category" asp-route-slug="@product.Category.Slug">@product.Category.Name</a>
+                </li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">@product.Name</li>
+        </ol>
+    </nav>
+
+    <div class="row g-5">
+        <!-- Gallery -->
+        <div class="col-lg-6 reveal">
+            <div class="product-gallery-main mb-3">
+                <img id="mainProductImage"
+                     src="@(mainImage?.ImageUrl ?? product.MainImageUrl ?? "/images/products/placeholder.jpg")"
+                     alt="@product.Name"
+                     onerror="this.src='/images/products/placeholder.jpg'" />
+            </div>
+            @if (images.Count > 1)
+            {
+                <div class="d-flex gap-2 flex-wrap">
+                    @foreach (var img in images)
+                    {
+                        <img src="@img.ImageUrl"
+                             alt="@(img.AltText ?? product.Name)"
+                             class="product-thumb @(img == mainImage ? "active" : "")"
+                             onerror="this.src='/images/products/placeholder.jpg'" />
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Product Info -->
+        <div class="col-lg-6 reveal" style="transition-delay:.1s">
+            <div class="product-info-sticky">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                @if (product.Category != null)
+                {
+                    <p class="text-muted mb-0" style="font-size:.72rem;letter-spacing:.22em;text-transform:uppercase">@product.Category.Name</p>
+                }
+                @if (!string.IsNullOrEmpty(product.Code))
+                {
+                    <p class="text-muted mb-0" style="font-size:.72rem;letter-spacing:.08em">Ürün Kodu: <span style="font-family:monospace">@product.Code</span></p>
+                }
+            </div>
+
+            <h1 class="product-detail-name mb-3">@product.Name</h1>
+
+            <div class="mb-3">
+                @if (product.IsOnSale)
+                {
+                    <span class="product-price-original me-2" style="font-size:1.1rem">@product.Price.ToString("N2") ₺</span>
+                    <span class="product-detail-price product-price-sale">@product.CurrentPrice.ToString("N2") ₺</span>
+                }
+                else
+                {
+                    <span class="product-detail-price">@product.Price.ToString("N2") ₺</span>
+                }
+            </div>
+
+            <!-- Çiçekçilik rozetleri -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                @if (product.IsSameDayDelivery)
+                {
+                    <span class="feature-chip feature-chip-accent"><i class="bi bi-lightning-charge"></i> Aynı Gün Teslimat</span>
+                }
+                @if (product.ContainsVase)
+                {
+                    <span class="feature-chip"><i class="bi bi-cup"></i> Vazo/Saksı Dahil</span>
+                }
+                @if (product.AllowsMessageCard)
+                {
+                    <span class="feature-chip"><i class="bi bi-envelope-heart"></i> Not Kartı Eklenebilir</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(product.ShortDescription))
+            {
+                <p class="text-muted mb-4" style="font-size:.9rem;line-height:1.7">@product.ShortDescription</p>
+            }
+
+            <!-- Option Selection -->
+            @if (options.Any())
+            {
+                <div class="mb-4">
+                    <p class="mb-2" style="font-size:.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Seçenek</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @{
+                            var firstInStockOption = options.FirstOrDefault(s =>
+                                product.Variants.Any(v => v.Size == s && v.IsActive && v.StockQuantity > 0));
+                        }
+                        @foreach (var option in options)
+                        {
+                            var optionVariant = product.Variants.FirstOrDefault(v => v.Size == option && v.IsActive);
+                            var inStock = optionVariant?.StockQuantity > 0;
+                            var optionPrice = product.CurrentPrice + (optionVariant?.PriceDifference ?? 0);
+                            <button class="variant-btn @(!inStock ? "disabled" : "") @(option == firstInStockOption ? "active" : "")"
+                                    data-variant-group="size"
+                                    data-variant-id="@optionVariant?.Id"
+                                    data-stock="@(optionVariant?.StockQuantity ?? 0)"
+                                    title="@optionPrice.ToString("N2") ₺"
+                                    @(inStock ? "" : "disabled")>
+                                @option
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <input type="hidden" id="selectedVariantId"
+                   value="@(product.Variants.FirstOrDefault(v => v.IsActive && v.StockQuantity > 0)?.Id)" />
+
+            <!-- Add to Cart -->
+            <div class="d-flex gap-3 mt-4">
+                @if (isPurchasable)
+                {
+                    <button class="btn-kw-dark flex-grow-1"
+                            data-add-cart
+                            data-product-id="@product.Id"
+                            data-quantity="1"
+                            onclick="window.kwPrepareAddToCart(this)">
+                        Sepete Ekle
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-kw-dark flex-grow-1" disabled style="opacity:.5;cursor:not-allowed">
+                        Tükendi
+                    </button>
+                }
+            </div>
+
+            <script>
+                window.kwPrepareAddToCart = function (btn) {
+                    const vid = document.getElementById('selectedVariantId')?.value || '';
+                    btn.dataset.variantId = vid;
+                    const activeOption = document.querySelector('.variant-btn[data-variant-group=size].active');
+                    btn.dataset.sizeLabel = activeOption ? activeOption.textContent.trim() : '';
+                };
+            </script>
+
+            @{
+                var totalStock = product.Variants.Any()
+                    ? product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity)
+                    : 0;
+                var initialOptionVariant = options
+                    .Select(s => product.Variants.FirstOrDefault(v => v.Size == s && v.IsActive))
+                    .FirstOrDefault(v => v != null && v.StockQuantity > 0);
+                var initialStock = options.Any() ? (initialOptionVariant?.StockQuantity ?? 0) : totalStock;
+            }
+            @if (product.Variants.Any())
+            {
+                <p id="stockWarning" class="text-warning mt-2" style="font-size:.82rem; @(initialStock is > 0 and <= 5 ? "" : "display:none")">
+                    <i class="bi bi-exclamation-triangle me-1"></i><span id="stockWarningText">Son @initialStock adet!</span>
+                </p>
+            }
+
+            <!-- Özel gün etiketleri -->
+            @if (occasions.Any())
+            {
+                <div class="mt-4">
+                    <p class="mb-2" style="font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--kw-gray)">Hangi Günler İçin?</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var occasion in occasions)
+                        {
+                            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="@occasion.Slug" class="occasion-chip">
+                                @occasion.Name
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Product Details accordion -->
+            <div class="mt-5">
+                <div class="accordion accordion-flush accordion-kw" id="productAccordion">
+                    @if (!string.IsNullOrEmpty(product.Description))
+                    {
+                        <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button ps-0" type="button" data-bs-toggle="collapse" data-bs-target="#descCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
+                                    Ürün Açıklaması
+                                </button>
+                            </h2>
+                            <div id="descCollapse" class="accordion-collapse collapse show">
+                                <div class="accordion-body ps-0 text-muted" style="font-size:.88rem;line-height:1.8">@Html.Raw(product.Description?.Replace("\n", "<br/>"))</div>
+                            </div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(product.CareInstructions))
+                    {
+                        <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button ps-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#careCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
+                                    Çiçek Bakımı
+                                </button>
+                            </h2>
+                            <div id="careCollapse" class="accordion-collapse collapse">
+                                <div class="accordion-body ps-0 text-muted" style="font-size:.88rem">
+                                    <p class="mb-0"><i class="bi bi-droplet me-2" style="color:var(--kw-sage)"></i>@product.CareInstructions</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button ps-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#deliveryCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
+                                Teslimat
+                            </button>
+                        </h2>
+                        <div id="deliveryCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body ps-0 text-muted" style="font-size:.88rem;line-height:1.8">
+                                @(product.IsSameDayDelivery
+                                    ? "Bu ürün Fethiye içi aynı gün teslimata uygundur. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz."
+                                    : "Bu ürün için en erken teslimat bir sonraki gündür. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz.")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    @if (Model.RelatedProducts.Any())
+    {
+        <div class="mt-6 pt-5 reveal" style="border-top:1px solid var(--kw-hairline)">
+            <p class="section-tag mb-2">Benzer Tasarımlar</p>
+            <h2 class="section-title mb-4" style="font-size:clamp(1.6rem,2.6vw,2.2rem)">Bunları da <em>sevebilirsiniz</em></h2>
+            <div class="row row-cols-2 row-cols-md-4 g-3">
+                @foreach (var related in Model.RelatedProducts)
+                {
+                    <div class="col">
+                        <a asp-controller="Product" asp-action="Detail" asp-route-slug="@related.Slug" class="d-block">
+                            <div class="product-card">
+                                <div class="product-card-image">
+                                    @if (!string.IsNullOrEmpty(related.MainImageUrl))
+                                    {
+                                        <img src="@related.MainImageUrl" alt="@related.Name" loading="lazy" />
+                                    }
+                                </div>
+                                <div class="product-card-body">
+                                    <div class="product-name">@related.Name</div>
+                                    <div class="product-price">@related.CurrentPrice.ToString("N2") ₺</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

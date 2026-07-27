@@ -1,0 +1,138 @@
+@{
+    ViewData["Title"] = "Ürünler";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var products = ViewBag.Products as IEnumerable<FethiyeCicekcisi.Core.Entities.Product> ?? Enumerable.Empty<FethiyeCicekcisi.Core.Entities.Product>();
+    var categories = ViewBag.Categories as IEnumerable<FethiyeCicekcisi.Core.Entities.Category> ?? Enumerable.Empty<FethiyeCicekcisi.Core.Entities.Category>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div></div>
+    <a href="/admin/urunler/ekle" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Yeni Ürün
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="ara" value="@ViewBag.SearchTerm" class="form-control form-control-sm" placeholder="Ürün ara..." />
+            </div>
+            <div class="col-md-3">
+                <select name="kategori" class="form-select form-select-sm">
+                    <option value="">Tüm Kategoriler</option>
+                    @foreach (var cat in categories)
+                    {
+                        <option value="@cat.Id" selected="@(ViewBag.CategoryId?.ToString() == cat.Id.ToString())">@cat.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-dark btn-sm">Filtrele</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size:.85rem">
+            <thead>
+                <tr class="text-muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em">
+                    <th class="ps-3 py-3">Ürün</th>
+                    <th class="py-3">Kategori</th>
+                    <th class="py-3">Fiyat</th>
+                    <th class="py-3">Stok</th>
+                    <th class="py-3">Durum</th>
+                    <th class="py-3">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in products)
+                {
+                    <tr>
+                        <td class="ps-3 py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                @if (!string.IsNullOrEmpty(product.MainImageUrl))
+                                {
+                                    <img src="@product.MainImageUrl" alt="" style="width:40px;height:50px;object-fit:cover;background:#f5f0e8" />
+                                }
+                                else
+                                {
+                                    <div style="width:40px;height:50px;background:#f5f0e8;display:flex;align-items:center;justify-content:center">
+                                        <i class="bi bi-image text-muted"></i>
+                                    </div>
+                                }
+                                <div>
+                                    <div class="fw-500">@product.Name</div>
+                                    <small class="text-muted">@product.Slug</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 text-muted">@product.Category?.Name</td>
+                        <td class="py-3">
+                            @product.CurrentPrice.ToString("N2") ₺
+                            @if (product.IsOnSale)
+                            {
+                                <small class="text-muted text-decoration-line-through ms-1">@product.Price.ToString("N2") ₺</small>
+                            }
+                        </td>
+                        <td class="py-3">
+                            @{
+                                var stock = product.Variants.Any()
+                                    ? product.Variants.Where(v => v.IsActive).Sum(v => v.StockQuantity)
+                                    : 0;
+                            }
+                            <span class="@(stock == 0 ? "text-danger" : stock <= 5 ? "text-warning" : "text-success")">@stock</span>
+                        </td>
+                        <td class="py-3">
+                            <span class="status-badge @(product.Status == FethiyeCicekcisi.Core.Enums.ProductStatus.Active ? "status-delivered" : "status-cancelled")">
+                                @(product.Status == FethiyeCicekcisi.Core.Enums.ProductStatus.Active ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            <div class="d-flex gap-2">
+                                <a href="/admin/urunler/duzenle/@product.Id" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="/admin/urunler/durum/@product.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Durum Değiştir">
+                                        <i class="bi bi-toggle-on"></i>
+                                    </button>
+                                </form>
+                                <form action="/admin/urunler/sil/@product.Id" method="post" onsubmit="return confirm('Ürünü silmek istediğinize emin misiniz?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+@{
+    var pages = (int)ViewBag.TotalPages;
+    var current = (int)ViewBag.CurrentPage;
+}
+@if (pages > 1)
+{
+    <nav class="mt-4 d-flex justify-content-center">
+        <ul class="pagination pagination-sm">
+            @for (int i = 1; i <= pages; i++)
+            {
+                <li class="page-item @(i == current ? "active" : "")">
+                    <a class="page-link" href="/admin/urunler?page=@i&ara=@ViewBag.SearchTerm&kategori=@ViewBag.CategoryId">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

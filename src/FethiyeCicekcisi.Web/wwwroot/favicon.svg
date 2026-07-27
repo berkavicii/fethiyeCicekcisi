@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#22332b"/>
+  <g transform="translate(32,32)">
+    <g fill="#c47a8a">
+      <ellipse cx="0" cy="-13" rx="6.5" ry="12"/>
+      <ellipse cx="0" cy="-13" rx="6.5" ry="12" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-13" rx="6.5" ry="12" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-13" rx="6.5" ry="12" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-13" rx="6.5" ry="12" transform="rotate(288)"/>
+    </g>
+    <circle cx="0" cy="0" r="6" fill="#fffdf9"/>
+  </g>
+</svg>

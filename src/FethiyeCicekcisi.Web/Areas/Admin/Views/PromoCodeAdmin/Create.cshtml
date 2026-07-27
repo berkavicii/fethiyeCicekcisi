@@ -1,0 +1,67 @@
+@using FethiyeCicekcisi.Core.Enums
+@model FethiyeCicekcisi.Web.ViewModels.Admin.AdminPromoCodeViewModel
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Yeni Promosyon Kodu" : "Promosyon Kodu Düzenle";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var isEdit = Model.Id != 0;
+}
+
+<div style="max-width:640px">
+    <form asp-controller="PromoCodeAdmin" asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+        @Html.AntiForgeryToken()
+        @if (isEdit)
+        {
+            <input type="hidden" asp-for="Id" />
+        }
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label fw-500" style="font-size:.85rem"></label>
+                    <div class="input-group">
+                        <input asp-for="Code" class="form-control" style="font-family:monospace;letter-spacing:.08em;text-transform:uppercase" />
+                        <button type="button" class="btn btn-outline-dark" onclick="regenCode()" title="Rastgele kod üret">
+                            <i class="bi bi-shuffle"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Code" class="text-danger" style="font-size:.78rem"></span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="DiscountType" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <select asp-for="DiscountType" class="form-select"
+                                asp-items="Html.GetEnumSelectList<PromoDiscountType>()"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Amount" class="form-label fw-500" style="font-size:.85rem"></label>
+                        <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                        <small class="text-muted" style="font-size:.75rem">Yüzde seçildiyse % değeri (ör. 20), sabit seçildiyse TL tutarı.</small>
+                        <span asp-validation-for="Amount" class="text-danger d-block" style="font-size:.78rem"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                            <label asp-for="IsActive" class="form-check-label" style="font-size:.85rem"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-dark">Kaydet</button>
+            <a href="/admin/promosyon-kodlari" class="btn btn-outline-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function regenCode() {
+            const hex = '0123456789ABCDEF';
+            let code = '';
+            for (let i = 0; i < 6; i++) code += hex[Math.floor(Math.random() * 16)];
+            document.getElementById('Code').value = code;
+        }
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}

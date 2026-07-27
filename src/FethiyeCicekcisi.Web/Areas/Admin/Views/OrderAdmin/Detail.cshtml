@@ -1,0 +1,195 @@
+@using FethiyeCicekcisi.Core.Enums
+@model FethiyeCicekcisi.Core.Entities.Order
+@{
+    ViewData["Title"] = "Sipariş " + Model.OrderNumber;
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Teslimat planı — çiçekçi için en kritik bilgi, en üstte -->
+        <div class="card border-0 shadow-sm mb-4" style="border-left:4px solid #c47a8a!important">
+            <div class="card-body d-flex flex-wrap gap-4 align-items-center" style="font-size:.9rem">
+                <div>
+                    <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Teslimat Tarihi</div>
+                    <strong style="font-size:1.05rem">@Model.DeliveryDate.ToString("dd.MM.yyyy dddd", new System.Globalization.CultureInfo("tr-TR"))</strong>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Saat Aralığı</div>
+                    <strong>@Model.DeliveryTimeSlot.ToDisplayName()</strong>
+                </div>
+                @if (Model.IsAnonymousSender)
+                {
+                    <div>
+                        <span class="status-badge status-pending"><i class="bi bi-incognito me-1"></i>Gizli Gönderen</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.CardMessage))
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600"><i class="bi bi-envelope-heart me-2"></i>Kart Mesajı</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0" style="font-style:italic;font-size:.95rem">"@Model.CardMessage"</p>
+                </div>
+            </div>
+        }
+
+        <!-- Items -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-600">Sipariş Kalemleri</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table mb-0" style="font-size:.87rem">
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3 py-3" style="width:60px">
+                                    @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                    {
+                                        <img src="@item.ProductImageUrl" style="width:50px;height:60px;object-fit:cover" />
+                                    }
+                                </td>
+                                <td class="py-3">
+                                    <div>@item.ProductName</div>
+                                    @if (!string.IsNullOrEmpty(item.VariantInfo))
+                                    {
+                                        <small class="text-muted">@item.VariantInfo</small>
+                                    }
+                                </td>
+                                <td class="py-3 text-muted text-center">× @item.Quantity</td>
+                                <td class="py-3 text-end pe-3 fw-500">@item.TotalPrice.ToString("N2") ₺</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+                <div class="p-3 border-top">
+                    <div class="d-flex justify-content-between mb-1" style="font-size:.85rem">
+                        <span class="text-muted">Ara Toplam</span>
+                        <span>@Model.SubTotal.ToString("N2") ₺</span>
+                    </div>
+                    @if (Model.Discount > 0)
+                    {
+                        <div class="d-flex justify-content-between mb-1" style="font-size:.85rem">
+                            <span class="text-muted">İndirim @(string.IsNullOrEmpty(Model.PromoCode) ? "" : $"(Kod: {Model.PromoCode})")</span>
+                            <span class="text-danger">−@Model.Discount.ToString("N2") ₺</span>
+                        </div>
+                    }
+                    <div class="d-flex justify-content-between mb-2" style="font-size:.85rem">
+                        <span class="text-muted">Teslimat</span>
+                        <span>@(Model.ShippingCost == 0 ? "Ücretsiz" : Model.ShippingCost.ToString("N2") + " ₺")</span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-600">
+                        <span>Toplam</span>
+                        <span>@Model.TotalAmount.ToString("N2") ₺</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gönderen / Alıcı -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-600"><i class="bi bi-person me-2"></i>Gönderen (Sipariş Veren)</h6>
+                    </div>
+                    <div class="card-body" style="font-size:.88rem">
+                        <strong>@Model.SenderName</strong>
+                        @if (Model.IsAnonymousSender)
+                        {
+                            <span class="ms-1 badge bg-warning text-dark" style="font-size:.65rem" title="Alıcıya gönderen bilgisi verilmeyecek">GİZLİ</span>
+                        }
+                        <br />
+                        <i class="bi bi-telephone me-1"></i>@Model.SenderPhone<br />
+                        <i class="bi bi-envelope me-1"></i>@Model.SenderEmail
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-600"><i class="bi bi-geo-alt me-2"></i>Alıcı (Teslimat)</h6>
+                    </div>
+                    <div class="card-body" style="font-size:.88rem">
+                        <strong>@Model.RecipientFirstName @Model.RecipientLastName</strong><br />
+                        @Model.RecipientAddressLine1<br />
+                        @if (!string.IsNullOrEmpty(Model.RecipientAddressLine2))
+                        {
+                            @Model.RecipientAddressLine2 <br />
+                        }
+                        @Model.RecipientDistrict / @Model.RecipientCity @Model.RecipientZipCode<br />
+                        <i class="bi bi-telephone me-1"></i>@Model.RecipientPhone
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Notes))
+        {
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Sipariş Notu</h6>
+                </div>
+                <div class="card-body" style="font-size:.88rem">@Model.Notes</div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Status Update -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-600">Sipariş Durumu</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="status-badge status-@Model.Status.ToString().ToLower()">@Model.Status.ToDisplayName()</span>
+                </div>
+                <form asp-controller="OrderAdmin" asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <select asp-for="Status" class="form-select mb-2"
+                            asp-items="Html.GetEnumSelectList<FethiyeCicekcisi.Core.Enums.OrderStatus>()"></select>
+                    <input type="text" name="takipNo" class="form-control mb-2"
+                           value="@Model.TrackingNumber" placeholder="Kargo/kurye takip no (opsiyonel)" style="font-size:.85rem" />
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Güncelle</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Payment -->
+        @if (Model.Payment != null)
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-600">Ödeme Bilgisi</h6>
+                </div>
+                <div class="card-body" style="font-size:.85rem">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Durum</span>
+                        <span>@Model.Payment.Status.ToDisplayName()</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">İşlem No</span>
+                        <span>@Model.Payment.TransactionId</span>
+                    </div>
+                    @if (Model.Payment.PaidAt.HasValue)
+                    {
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Tarih</span>
+                            <span>@Model.Payment.PaidAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

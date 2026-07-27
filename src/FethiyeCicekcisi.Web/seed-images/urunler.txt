@@ -1,0 +1,55 @@
+# ============================================================
+# GERÇEK ÜRÜN LİSTESİ — canlıya çıkmadan önce site açılışında
+# hazır gelecek ürünler burada tanımlanır.
+#
+# NASIL KULLANILIR:
+# 1) Her ürün için aşağıdaki gibi bir blok yaz (bloklar arasında
+#    en az bir boş satır bırak).
+# 2) "klasor:" alanında yazdığın isimle aynı adda bir klasör aç
+#    (bu dosyayla aynı yerde, yani seed-images/ altında) ve o
+#    ürüne ait fotoğrafları oraya koy (jpg/jpeg/png/webp).
+#    ÖNEMLİ: HEIC/HEIF (iPhone'un varsayılan formatı) burada
+#    OTOMATİK DÖNÜŞTÜRÜLMÜYOR (admin panelindeki yüklemeden farklı
+#    olarak, burada tarayıcı devrede değil) — HEIC dosyalarını
+#    klasöre koymadan önce JPG'ye çevirin. Çevirmeden koyarsanız
+#    o ürün görselsiz eklenir ve loglara uyarı düşer.
+# 3) Bir üründe birden fazla fotoğraf varsa hepsi aynı klasöre
+#    girer; dosya adlarının başına 1-, 2-, 3- gibi sıra numarası
+#    koyarsan galeri sırası ona göre olur (ilk sıradaki = ana
+#    görsel). Numara yoksa alfabetik sıra kullanılır.
+# 4) "kategori:" alanı şu anki kategorilerden biri olmalı:
+#    Buketler, Orkideler, Saksı Çiçekleri, Çelenkler, Teraryumlar,
+#    Aranjmanlar, Yapay Çiçekler
+#    (Yeni bir kategori adı yazarsan otomatik oluşturulur.)
+# 5) "aciklama:", "kisa_aciklama:" ve "bakim:" opsiyoneldir.
+# 6) STOK — iki yoldan biriyle verilir (verilmezse ürün stoksuz
+#    eklenir ve sitede "Tükendi" görünür, satın alınamaz):
+#      secenekler: 11 Adet=10, 21 Adet=5, Büyük Boy=3
+#        → seçenek başına stok. 0 yazarsan o seçenek sitede görünür
+#          ama üstü çizili/seçilemez olur (ör. Büyük Boy=0).
+#      stok: 8
+#        → tek seçenekli ürünler için toplam stok.
+#    Ürün siteye bir kez eklendikten sonra stok admin panelinden
+#    yönetilir; buradaki sayıyı sonradan değiştirmek mevcut ürünü
+#    ETKİLEMEZ (yanlışlıkla canlı stokun ezilmemesi için).
+# 7) ÇİÇEKÇİLİK ALANLARI (opsiyonel):
+#      vazolu: evet          → ürünle vazo/saksı birlikte gelir
+#      ayni_gun: evet        → aynı gün teslimata uygun
+#      kart_yok: 1           → bu ürüne not kartı EKLENEMEZ (çelenk gibi)
+#      ozel_gunler: Anneler Günü, Doğum Günü
+#        → mevcut özel gün etiketleri (admin panelinden yönetilir)
+#
+# ÖRNEK (referans için — silebilirsin):
+#
+# klasor: kirmizi-gul-buketi
+# ad: Kırmızı Gül Buketi
+# fiyat: 850
+# kategori: Buketler
+# secenekler: 11 Adet=10, 21 Adet=5, 41 Adet=2
+# ayni_gun: evet
+# ozel_gunler: Sevgililer Günü, Doğum Günü
+# kisa_aciklama: El bağlaması kırmızı gül buketi
+# aciklama: İthal kırmızı güllerden kraft ambalajda buket.
+# bakim: Sapları çapraz kesin, suyu her gün tazeleyin.
+#
+# ============================================================
