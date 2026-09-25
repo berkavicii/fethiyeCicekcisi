@@ -24,4 +24,11 @@ public class ProductDetailViewModel
 {
     public Core.Entities.Product Product { get; set; } = null!;
     public IEnumerable<Core.Entities.Product> RelatedProducts { get; set; } = new List<Core.Entities.Product>();
+
+    /// <summary>Ürün sayfasında teslimat bölgesi/tarihi ön izlemesi için — Checkout'takiyle
+    /// aynı aktif bölge listesi.</summary>
+    public IEnumerable<DeliveryZone> Zones { get; set; } = new List<DeliveryZone>();
+
+    /// <summary>Bu ürün aynı gün teslimata uygunsa bugün, değilse yarın.</summary>
+    public DateOnly MinDeliveryDate { get; set; }
 }

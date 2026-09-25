@@ -22,6 +22,13 @@ public class OrderController : Controller
     private readonly IConfiguration _config;
     private const string SessionIdKey = "cart_session_id";
 
+    /// <summary>"Gel Al" seçildiğinde alıcı adresi olarak kullanılan sabit mağaza adresi —
+    /// bu seçenekte teslimat ücreti alınmaz.</summary>
+    private const string PickupAddressLine1 = "Tuzla, İnönü Blv. 125/c";
+    private const string PickupCity = "Muğla";
+    private const string PickupDistrict = "Fethiye";
+    private const string PickupZipCode = "48300";
+
     public OrderController(
         OrderService orderService,
         CartService cartService,
@@ -130,11 +137,27 @@ public class OrderController : Controller
                 "Sepetinizdeki ürünler not kartı kabul etmiyor.");
 
         DeliveryZone? zone = null;
-        if (model.DeliveryZoneId.HasValue)
+        if (model.DeliveryType == DeliveryType.GelAl)
         {
-            zone = await _zoneRepo.GetByIdAsync(model.DeliveryZoneId.Value);
-            if (zone is null || !zone.IsActive || zone.IsDeleted)
-                ModelState.AddModelError(nameof(model.DeliveryZoneId), "Geçerli bir teslimat bölgesi seçiniz.");
+            // Mağazadan gel-al: bölge/adres seçilmez, ücret alınmaz.
+            ModelState.Remove(nameof(model.DeliveryZoneId));
+            ModelState.Remove(nameof(model.RecipientAddressLine1));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(model.RecipientAddressLine1))
+                ModelState.AddModelError(nameof(model.RecipientAddressLine1), "Teslimat adresi zorunludur.");
+
+            if (!model.DeliveryZoneId.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.DeliveryZoneId), "Teslimat bölgesi seçiniz.");
+            }
+            else
+            {
+                zone = await _zoneRepo.GetByIdAsync(model.DeliveryZoneId.Value);
+                if (zone is null || !zone.IsActive || zone.IsDeleted)
+                    ModelState.AddModelError(nameof(model.DeliveryZoneId), "Geçerli bir teslimat bölgesi seçiniz.");
+            }
         }
 
         PromoCode? promo = null;
@@ -157,16 +180,30 @@ public class OrderController : Controller
             return View(model);
         }
 
-        var recipientAddress = new Address
-        {
-            FirstName = model.RecipientFirstName,
-            LastName = model.RecipientLastName,
-            Phone = model.RecipientPhone,
-            AddressLine1 = model.RecipientAddressLine1,
-            AddressLine2 = model.RecipientAddressLine2,
-            City = zone!.City,
-            District = zone.Name
-        };
+        var isPickup = model.DeliveryType == DeliveryType.GelAl;
+
+        var recipientAddress = isPickup
+            ? new Address
+            {
+                FirstName = model.RecipientFirstName,
+                LastName = model.RecipientLastName,
+                Phone = model.RecipientPhone,
+                AddressLine1 = PickupAddressLine1,
+                AddressLine2 = null,
+                City = PickupCity,
+                District = PickupDistrict,
+                ZipCode = PickupZipCode
+            }
+            : new Address
+            {
+                FirstName = model.RecipientFirstName,
+                LastName = model.RecipientLastName,
+                Phone = model.RecipientPhone,
+                AddressLine1 = model.RecipientAddressLine1,
+                AddressLine2 = model.RecipientAddressLine2,
+                City = zone!.City,
+                District = zone.Name
+            };
 
         var details = new CheckoutDetails(
             model.SenderName,
@@ -177,7 +214,8 @@ public class OrderController : Controller
             model.DeliveryTimeSlot,
             anyCardAllowed ? model.CardMessage : null,
             model.Notes,
-            ZoneFee: zone.Fee,
+            DeliveryType: model.DeliveryType,
+            ZoneFee: isPickup ? 0 : zone!.Fee,
             Discount: ComputeDiscount(promo, subTotal),
             PromoCode: promo?.Code,
             GuestSessionId: sessionId);
@@ -225,7 +263,7 @@ public class OrderController : Controller
             order.TotalAmount,
             userIp,
             model.SenderName,
-            $"{model.RecipientAddressLine1}, {zone.Name}, {zone.City}",
+            $"{order.RecipientAddressLine1}, {order.RecipientDistrict}, {order.RecipientCity}",
             basketItems);
 
         if (!success)

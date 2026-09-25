@@ -1,10 +1,85 @@
+@using System.Text.Json
+@using Microsoft.Extensions.Localization
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@inject IStringLocalizer<SharedResource> L
+@{
+    var supportedLanguages = new[]
+    {
+        (Code: "tr", Flag: "🇹🇷", Label: "Türkçe"),
+        (Code: "en", Flag: "🇬🇧", Label: "English"),
+        (Code: "ru", Flag: "🇷🇺", Label: "Русский"),
+        (Code: "de", Flag: "🇩🇪", Label: "Deutsch")
+    };
+    // Aktif dil, RequestLocalization'ın okuduğu "site_lang" çerezinden gelir (Program.cs).
+    // Google Translate widget'ı kaldırıldı — performans sorunlarına yol açıyordu; bunun yerine
+    // ürün adı/açıklaması admin panelinde elle (veya Google Translate'e tek tıkla açılıp oradan
+    // kopyalanarak) her dilde giriliyor (bkz. ProductAdminController, ProductTranslation).
+    var activeCode = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var activeLanguage = supportedLanguages.FirstOrDefault(l => l.Code == activeCode);
+    if (activeLanguage.Code is null) activeLanguage = supportedLanguages[0];
+
+    // Tüm SEO meta üretimi tek yerden: her view ViewData["Title"/"Description"/"CanonicalUrl"/
+    // "OgImage"/"Robots"] set ederek override edebilir, hiçbiri set etmezse makul varsayılanlara düşer.
+    var siteUrl = (Configuration["SiteSettings:SiteUrl"] ?? "https://www.fethiyecicekcisi.com").TrimEnd('/');
+    var pageTitle = ViewData["Title"] as string;
+    var fullTitle = string.IsNullOrWhiteSpace(pageTitle) ? "Yonca Çiçekçilik" : $"{pageTitle} — Yonca Çiçekçilik";
+    var metaDescription = ViewData["Description"] as string
+        ?? "Yonca Çiçekçilik — taze çiçek, el bağlaması buket, orkide ve aranjman. Fethiye içi aynı gün teslimat.";
+    // Sıralama/filtre/sayfalama query string'leri (?sirala=, ?sayfa=, ?ara= vb.) aynı içeriği farklı
+    // URL'lerde tekrar ettirip duplicate content'e yol açabilir — canonical varsayılan olarak
+    // query string'siz temiz path'e işaret eder; bir view farklısını istiyorsa CanonicalUrl override eder.
+    var canonicalUrl = ViewData["CanonicalUrl"] as string ?? $"{siteUrl}{Context.Request.Path}";
+    var ogImage = ViewData["OgImage"] as string ?? $"{siteUrl}/images/logo.png";
+    var robots = ViewData["Robots"] as string ?? "index, follow";
+
+    // Dictionary + JsonSerializer ile üretiliyor: @(...) ile doğrudan string interpolation
+    // Razor'ın HTML-encode'undan geçer (ör. "+" → "&#x2B;") ve script içindeki JSON'u bozar.
+    var orgJsonLd = new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "FloristShop",
+        ["name"] = "Yonca Çiçekçilik",
+        ["url"] = siteUrl,
+        ["image"] = $"{siteUrl}/images/logo.png",
+        ["telephone"] = Configuration["SiteSettings:ContactPhone"],
+        ["email"] = Configuration["SiteSettings:ContactEmail"],
+        ["address"] = new Dictionary<string, object?>
+        {
+            ["@type"] = "PostalAddress",
+            ["streetAddress"] = "Tuzla, İnönü Blv. 125/c",
+            ["addressLocality"] = "Fethiye",
+            ["addressRegion"] = "Muğla",
+            ["postalCode"] = "48300",
+            ["addressCountry"] = "TR"
+        },
+        ["sameAs"] = new[] { Configuration["SiteSettings:InstagramUrl"] }
+    };
+    var orgJsonLdJson = JsonSerializer.Serialize(orgJsonLd);
+}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="@activeLanguage.Code">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] — Yonca Çiçekçilik</title>
-    <meta name="description" content="@(ViewData["Description"] ?? "Yonca Çiçekçilik — taze çiçek, el bağlaması buket, orkide ve aranjman. Fethiye içi aynı gün teslimat.")" />
+    <title>@fullTitle</title>
+    <meta name="description" content="@metaDescription" />
+    <meta name="robots" content="@robots" />
+    <link rel="canonical" href="@canonicalUrl" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Yonca Çiçekçilik" />
+    <meta property="og:title" content="@fullTitle" />
+    <meta property="og:description" content="@metaDescription" />
+    <meta property="og:url" content="@canonicalUrl" />
+    <meta property="og:image" content="@ogImage" />
+    <meta property="og:locale" content="tr_TR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@fullTitle" />
+    <meta name="twitter:description" content="@metaDescription" />
+    <meta name="twitter:image" content="@ogImage" />
 
     <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
 
@@ -17,13 +92,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,350;0,9..144,400;0,9..144,450;0,9..144,500;1,9..144,350;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Organization / LocalBusiness structured data — her sayfada sabit, arama sonuçlarında
+         işletme kimliğinin (adres, telefon, sosyal medya) tanınması için. -->
+    <script type="application/ld+json">@Html.Raw(orgJsonLdJson)</script>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
 
     <!-- Announcement Bar -->
     <div class="announcement-bar text-center py-2 px-3">
-        <small><i class="bi bi-flower1 me-1"></i>Fethiye içi <strong>aynı gün teslimat</strong> &nbsp;|&nbsp; Saat <strong>13:00–17:00</strong> ve <strong>17:00–21:00</strong> teslimat dilimleri</small>
+        <small><i class="bi bi-flower1 me-1"></i><strong>@L["Fethiye içi aynı gün teslimat"]</strong> &nbsp;|&nbsp; @L["Saat 09:00–13:00 ve 13:30–20:00 teslimat dilimleri"]</small>
     </div>
 
     <!-- Navbar -->
@@ -39,12 +118,12 @@
 
             <ul class="navbar-nav d-none d-lg-flex flex-row gap-1 mx-auto mb-0">
                 <li class="nav-item">
-                    <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
+                    <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Çiçekler</a>
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">@L["Çiçekler"]</a>
                     <ul class="dropdown-menu dropdown-menu-minimal">
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">Buketler</a></li>
+                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="saksi-cicekleri">Saksı Çiçekleri</a></li>
@@ -52,11 +131,11 @@
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="yapay-cicekler">Yapay Çiçekler</a></li>
                         <li><hr class="dropdown-divider" /></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">Tüm Çiçekler</a></li>
+                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a></li>
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Özel Günler</a>
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">@L["Özel Günler"]</a>
                     <ul class="dropdown-menu dropdown-menu-minimal">
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Occasion" asp-route-slug="sevgililer-gunu">Sevgililer Günü</a></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Occasion" asp-route-slug="anneler-gunu">Anneler Günü</a></li>
@@ -68,14 +147,30 @@
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Home" asp-action="About">Hakkımızda</a>
+                    <a class="nav-link" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Home" asp-action="Contact">İletişim</a>
+                    <a class="nav-link" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
                 </li>
             </ul>
 
             <div class="d-none d-lg-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <a href="#" class="nav-icon-btn d-flex align-items-center gap-1" data-bs-toggle="dropdown" title="@activeLanguage.Label" style="font-size:1.1rem">
+                        @activeLanguage.Flag
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-minimal">
+                        @foreach (var lang in supportedLanguages)
+                        {
+                            <li>
+                                <button type="button" onclick="kwSetSiteLanguage('@lang.Code')" class="dropdown-item d-flex align-items-center gap-2 @(lang.Code == activeLanguage.Code ? "active" : "")">
+                                    <span style="font-size:1.05rem">@lang.Flag</span> @lang.Label
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <div class="dropdown">
@@ -83,18 +178,18 @@
                             <i class="bi bi-person fs-5"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-minimal">
-                            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">Profilim</a></li>
-                            <li><a class="dropdown-item" asp-controller="Order" asp-action="MyOrders">Siparişlerim</a></li>
+                            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">@L["Profilim"]</a></li>
+                            <li><a class="dropdown-item" asp-controller="Order" asp-action="MyOrders">@L["Siparişlerim"]</a></li>
                             @if (User.IsInRole("Admin"))
                             {
                                 <li><hr class="dropdown-divider" /></li>
-                                <li><a class="dropdown-item" href="/admin">Admin Panel</a></li>
+                                <li><a class="dropdown-item" href="/admin">@L["Admin Panel"]</a></li>
                             }
                             <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <form asp-controller="Account" asp-action="Logout" method="post">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="dropdown-item">Çıkış Yap</button>
+                                    <button type="submit" class="dropdown-item">@L["Çıkış Yap"]</button>
                                 </form>
                             </li>
                         </ul>
@@ -102,18 +197,33 @@
                 }
                 else
                 {
-                    <a asp-controller="Account" asp-action="Login" class="nav-icon-btn" title="Giriş Yap">
+                    <a asp-controller="Account" asp-action="Login" class="nav-icon-btn" title="@L["Giriş Yap"]">
                         <i class="bi bi-person fs-5"></i>
                     </a>
                 }
 
-                <a asp-controller="Cart" asp-action="Index" class="nav-icon-btn position-relative" title="Sepet">
+                <a asp-controller="Cart" asp-action="Index" class="nav-icon-btn position-relative" title="@L["Sepet"]">
                     <i class="bi bi-bag fs-5"></i>
                     <span class="cart-badge" id="cartBadgeDesktop">0</span>
                 </a>
             </div>
 
             <div class="d-flex align-items-center gap-2 d-lg-none">
+                <div class="dropdown">
+                    <a href="#" class="nav-icon-btn" data-bs-toggle="dropdown" style="font-size:1.1rem">
+                        @activeLanguage.Flag
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-minimal">
+                        @foreach (var lang in supportedLanguages)
+                        {
+                            <li>
+                                <button type="button" onclick="kwSetSiteLanguage('@lang.Code')" class="dropdown-item d-flex align-items-center gap-2 @(lang.Code == activeLanguage.Code ? "active" : "")">
+                                    <span style="font-size:1.05rem">@lang.Flag</span> @lang.Label
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                </div>
                 <a asp-controller="Cart" asp-action="Index" class="nav-icon-btn position-relative">
                     <i class="bi bi-bag fs-5"></i>
                     <span class="cart-badge" id="cartBadgeMobile">0</span>
@@ -132,34 +242,34 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Kapat"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">Buketler</a>
+            <a class="nav-link" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
+            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="saksi-cicekleri">Saksı Çiçekleri</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="teraryumlar">Teraryumlar</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Index">Tüm Çiçekler</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="About">Hakkımızda</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="Contact">İletişim</a>
+            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a>
+            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
+            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
 
             <div class="mt-3">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>Profilim</a>
-                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Order" asp-action="MyOrders"><i class="bi bi-bag-check me-2"></i>Siparişlerim</a>
+                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>@L["Profilim"]</a>
+                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Order" asp-action="MyOrders"><i class="bi bi-bag-check me-2"></i>@L["Siparişlerim"]</a>
                     @if (User.IsInRole("Admin"))
                     {
-                        <a class="nav-link" data-bs-dismiss="offcanvas" href="/admin"><i class="bi bi-speedometer2 me-2"></i>Admin Panel</a>
+                        <a class="nav-link" data-bs-dismiss="offcanvas" href="/admin"><i class="bi bi-speedometer2 me-2"></i>@L["Admin Panel"]</a>
                     }
                     <form asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn-kw-outline w-100">Çıkış Yap</button>
+                        <button type="submit" class="btn-kw-outline w-100">@L["Çıkış Yap"]</button>
                     </form>
                 }
                 else
                 {
-                    <a asp-controller="Account" asp-action="Login" class="btn-kw-dark w-100 mt-2" data-bs-dismiss="offcanvas">Giriş Yap</a>
+                    <a asp-controller="Account" asp-action="Login" class="btn-kw-dark w-100 mt-2" data-bs-dismiss="offcanvas">@L["Giriş Yap"]</a>
                 }
             </div>
         </div>
@@ -196,8 +306,8 @@
                     <div class="trust-badge">
                         <div class="trust-badge-icon"><i class="bi bi-lightning-charge"></i></div>
                         <div>
-                            <div class="trust-badge-title">Aynı Gün Teslimat</div>
-                            <div class="trust-badge-sub">Fethiye içi</div>
+                            <div class="trust-badge-title">@L["Aynı Gün Teslimat"]</div>
+                            <div class="trust-badge-sub">@L["Fethiye içi"]</div>
                         </div>
                     </div>
                 </div>
@@ -205,8 +315,8 @@
                     <div class="trust-badge">
                         <div class="trust-badge-icon"><i class="bi bi-flower2"></i></div>
                         <div>
-                            <div class="trust-badge-title">Taze Çiçek Garantisi</div>
-                            <div class="trust-badge-sub">Mevsiminde, günlük</div>
+                            <div class="trust-badge-title">@L["Taze Çiçek Garantisi"]</div>
+                            <div class="trust-badge-sub">@L["Mevsiminde, günlük"]</div>
                         </div>
                     </div>
                 </div>
@@ -214,8 +324,8 @@
                     <div class="trust-badge">
                         <div class="trust-badge-icon"><i class="bi bi-shield-check"></i></div>
                         <div>
-                            <div class="trust-badge-title">Güvenli Ödeme</div>
-                            <div class="trust-badge-sub">PayTR ile %100</div>
+                            <div class="trust-badge-title">@L["Güvenli Ödeme"]</div>
+                            <div class="trust-badge-sub">@L["PayTR ile %100"]</div>
                         </div>
                     </div>
                 </div>
@@ -223,8 +333,8 @@
                     <div class="trust-badge">
                         <div class="trust-badge-icon"><i class="bi bi-envelope-heart"></i></div>
                         <div>
-                            <div class="trust-badge-title">Not Kartı Hediye</div>
-                            <div class="trust-badge-sub">Mesajınız bizden</div>
+                            <div class="trust-badge-title">@L["Not Kartı Hediye"]</div>
+                            <div class="trust-badge-sub">@L["Mesajınız bizden"]</div>
                         </div>
                     </div>
                 </div>
@@ -235,7 +345,7 @@
     <footer class="site-footer py-5">
         <div class="container">
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <img src="/images/logo.png" alt="Yonca Çiçekçilik" class="brand-logo mb-3" style="filter:brightness(0) invert(1)" />
                     <p class="footer-statement">"Her buket, bir duyguyu yerine ulaştırır."</p>
                     <div class="social-links mt-3 d-flex gap-2">
@@ -244,45 +354,100 @@
                         </a>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <h6 class="footer-heading">Çiçekler</h6>
+                <div class="col-6 col-md-2">
+                    <h6 class="footer-heading">@L["Çiçekler"]</h6>
                     <ul class="footer-links">
-                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="buketler">Buketler</a></li>
+                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a></li>
                         <li><a asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a></li>
                         <li><a asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a></li>
                         <li><a asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a></li>
-                        <li><a asp-controller="Product" asp-action="Index">Tüm Çiçekler</a></li>
+                        <li><a asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a></li>
                     </ul>
                 </div>
-                <div class="col-md-2">
-                    <h6 class="footer-heading">Hesap</h6>
+                <div class="col-6 col-md-2">
+                    <h6 class="footer-heading">@L["Hesap"]</h6>
                     <ul class="footer-links">
-                        <li><a asp-controller="Account" asp-action="Login">Giriş Yap</a></li>
-                        <li><a asp-controller="Account" asp-action="Register">Kayıt Ol</a></li>
-                        <li><a asp-controller="Order" asp-action="MyOrders">Siparişlerim</a></li>
+                        <li><a asp-controller="Account" asp-action="Login">@L["Giriş Yap"]</a></li>
+                        <li><a asp-controller="Account" asp-action="Register">@L["Kayıt Ol"]</a></li>
+                        <li><a asp-controller="Order" asp-action="MyOrders">@L["Siparişlerim"]</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
-                    <h6 class="footer-heading">Yardım</h6>
+                <div class="col-6 col-md-2">
+                    <h6 class="footer-heading">@L["Yasal"]</h6>
                     <ul class="footer-links">
-                        <li><a asp-controller="Home" asp-action="Contact">İletişim</a></li>
-                        <li><a asp-controller="Home" asp-action="About">Hakkımızda</a></li>
+                        <li><a asp-controller="Legal" asp-action="PrivacySecurity">@L["Gizlilik ve Güvenlik"]</a></li>
+                        <li><a asp-controller="Legal" asp-action="DistanceSalesContract">@L["Mesafeli Satış Sözleşmesi"]</a></li>
+                        <li><a asp-controller="Legal" asp-action="CancellationRefundPolicy">@L["İptal, İade ve Değişim"]</a></li>
+                        <li><a asp-controller="Legal" asp-action="ShippingPolicy">@L["Teslimat Koşulları"]</a></li>
                     </ul>
-                    <p class="text-muted small mt-3"><i class="bi bi-envelope me-1"></i> info@yoncacicekcilik.com</p>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="footer-heading">@L["Yardım"]</h6>
+                    <ul class="footer-links">
+                        <li><a asp-controller="Home" asp-action="Contact">@L["İletişim"]</a></li>
+                        <li><a asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a></li>
+                    </ul>
+                    <p class="text-muted small mt-3"><i class="bi bi-envelope me-1"></i> info@fethiyecicekcisi.com</p>
                     <p class="text-muted small"><i class="bi bi-geo-alt me-1"></i> Fethiye / Muğla</p>
                 </div>
             </div>
             <hr class="my-4" />
             <div class="row align-items-center">
                 <div class="col text-muted small">
-                    &copy; @DateTime.Now.Year Yonca Çiçekçilik. Tüm hakları saklıdır.
+                    &copy; @DateTime.Now.Year Yonca Çiçekçilik. @L["Tüm hakları saklıdır."]
+                </div>
+                <div class="col-auto text-muted small">
+                    Designed by <a href="https://berkavci.com" target="_blank" rel="noopener">berkavci</a>
                 </div>
             </div>
         </div>
     </footer>
 
+    @* Çerez bilgilendirme bandı: sitede yalnızca zorunlu çerezler var, bu yüzden rıza değil
+       bilgilendirme amaçlı (KVKK Çerez Rehberi: zorunlu çerezler için açık rıza gerekmez).
+       "Anladım" localStorage'a yazılır, bant bir daha gösterilmez. *@
+    <div class="cookie-banner d-none" id="cookieBanner" role="region" aria-label="Çerez bilgilendirmesi">
+        <p class="mb-0">
+            Bu sitede yalnızca sitenin çalışması için zorunlu çerezler kullanılır (sepet, oturum, güvenlik).
+            Ayrıntılar için <a asp-controller="Legal" asp-action="CookiePolicy">Çerez Politikası</a>'nı inceleyebilirsiniz.
+        </p>
+        <button type="button" class="cookie-banner-btn" id="cookieBannerOk">Anladım</button>
+    </div>
+
+    <script>
+        // Site dilini "site_lang" çerezine yazıp sayfayı yeniler — bu çerezi Program.cs'teki
+        // RequestLocalizationOptions okuyup CultureInfo.CurrentUICulture'ı buna göre set eder.
+        // Menü/buton gibi arayüz metinleri SharedResource (.resx) üzerinden, ürün adı/açıklaması
+        // ise ProductTranslation tablosundan o dile göre gösterilir (bkz. ProductLocalizationExtensions).
+        // Google Translate widget'ı kasıtlı olarak KULLANILMIYOR — büyük bir üçüncü parti script
+        // olduğu için sayfada fark edilir bir kasmaya yol açıyordu.
+        function kwSetSiteLanguage(code) {
+            var fullCulture = { tr: 'tr-TR', en: 'en-US', ru: 'ru-RU', de: 'de-DE' }[code] || 'tr-TR';
+            var expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = 'site_lang=c%3D' + fullCulture + '%7Cuic%3D' + fullCulture +
+                '; expires=' + expires.toUTCString() + '; path=/';
+            location.reload();
+        }
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var KEY = 'yc_cookie_notice_ok';
+            var banner = document.getElementById('cookieBanner');
+            var btn = document.getElementById('cookieBannerOk');
+            if (!banner || !btn) return;
+            try {
+                if (!localStorage.getItem(KEY)) banner.classList.remove('d-none');
+            } catch (e) { banner.classList.remove('d-none'); }
+            btn.addEventListener('click', function () {
+                try { localStorage.setItem(KEY, '1'); } catch (e) { }
+                banner.classList.add('d-none');
+            });
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

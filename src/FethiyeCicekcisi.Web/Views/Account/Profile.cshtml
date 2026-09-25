@@ -1,10 +1,12 @@
 @model FethiyeCicekcisi.Web.ViewModels.Account.ProfileViewModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 @{
     ViewData["Title"] = "Hesabım";
 }
 
 <div class="container py-5" style="max-width:600px">
-    <h1 class="section-title mb-5">Hesabım</h1>
+    <h1 class="section-title mb-5">@L["Hesabım"]</h1>
 
     <form asp-controller="Account" asp-action="Profile" method="post">
         @Html.AntiForgeryToken()
@@ -12,7 +14,7 @@
 
         <div class="card border-0 bg-light-kw mb-4">
             <div class="card-body">
-                <h6 class="fw-600 mb-3" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.07em">Kişisel Bilgiler</h6>
+                <h6 class="fw-600 mb-3" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.07em">@L["Kişisel Bilgiler"]</h6>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="FirstName" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
@@ -38,7 +40,7 @@
 
         <div class="card border-0 bg-light-kw mb-4">
             <div class="card-body">
-                <h6 class="fw-600 mb-3" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.07em">Şifre Değiştir <small class="text-muted fw-400">(Opsiyonel)</small></h6>
+                <h6 class="fw-600 mb-3" style="font-size:.82rem;text-transform:uppercase;letter-spacing:.07em">@L["Şifre Değiştir"] <small class="text-muted fw-400">(@L["Opsiyonel"])</small></h6>
                 <div class="mb-3">
                     <label asp-for="CurrentPassword" class="form-label" style="font-size:.82rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em"></label>
                     <input asp-for="CurrentPassword" class="form-control form-control-kw" type="password" autocomplete="current-password" />
@@ -55,8 +57,8 @@
         </div>
 
         <div class="d-flex gap-3">
-            <button type="submit" class="btn-kw-dark border-0">Kaydet</button>
-            <a asp-controller="Order" asp-action="MyOrders" class="btn-kw-outline">Siparişlerim</a>
+            <button type="submit" class="btn-kw-dark border-0">@L["Kaydet"]</button>
+            <a asp-controller="Order" asp-action="MyOrders" class="btn-kw-outline">@L["Siparişlerim"]</a>
         </div>
     </form>
 </div>

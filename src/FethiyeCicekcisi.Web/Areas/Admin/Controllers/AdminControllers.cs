@@ -93,6 +93,36 @@ public class ProductAdminController : Controller
         return View();
     }
 
+    /// <summary>Admin formundaki EN/RU/DE sekmelerinden gelen değerleri Product.Translations'a
+    /// upsert eder — bir dilin adı boş bırakılmışsa o dilin çevirisi tamamen silinir (admin
+    /// önceden girip sonra temizlediyse ürün o dilde tekrar Türkçe gösterilsin diye).</summary>
+    private static void UpsertProductTranslations(Product product, AdminProductViewModel model)
+    {
+        var incoming = new (string Code, TranslationFieldsViewModel Fields)[]
+        {
+            ("en", model.EN), ("ru", model.RU), ("de", model.DE)
+        };
+
+        foreach (var (code, fields) in incoming)
+        {
+            var existing = product.Translations.FirstOrDefault(t => t.LanguageCode == code);
+            if (string.IsNullOrWhiteSpace(fields.Name))
+            {
+                if (existing is not null) product.Translations.Remove(existing);
+                continue;
+            }
+
+            if (existing is null)
+            {
+                existing = new Core.Entities.ProductTranslation { ProductId = product.Id, LanguageCode = code };
+                product.Translations.Add(existing);
+            }
+            existing.Name = fields.Name.Trim();
+            existing.ShortDescription = string.IsNullOrWhiteSpace(fields.ShortDescription) ? null : fields.ShortDescription.Trim();
+            existing.Description = string.IsNullOrWhiteSpace(fields.Description) ? null : fields.Description.Trim();
+        }
+    }
+
     [HttpGet("ekle")]
     public async Task<IActionResult> Create()
     {
@@ -196,6 +226,9 @@ public class ProductAdminController : Controller
                 TempData["Warning"] = BuildSkippedImagesMessage(skipped);
         }
 
+        UpsertProductTranslations(product, model);
+        await _productService.UpdateProductAsync(product);
+
         TempData["Success"] = "Ürün başarıyla eklendi.";
         return RedirectToAction("Index");
     }
@@ -249,10 +282,17 @@ public class ProductAdminController : Controller
                 PriceDifference = v.PriceDifference,
                 SKU = v.SKU,
                 IsActive = v.IsActive
-            }).ToList()
+            }).ToList(),
+            EN = ToFields(product.Translations.FirstOrDefault(t => t.LanguageCode == "en")),
+            RU = ToFields(product.Translations.FirstOrDefault(t => t.LanguageCode == "ru")),
+            DE = ToFields(product.Translations.FirstOrDefault(t => t.LanguageCode == "de"))
         };
 
         return View(vm);
+
+        static TranslationFieldsViewModel ToFields(Core.Entities.ProductTranslation? t) => t is null
+            ? new TranslationFieldsViewModel()
+            : new TranslationFieldsViewModel { Name = t.Name, ShortDescription = t.ShortDescription, Description = t.Description };
     }
 
     [HttpPost("duzenle/{id:int}")]
@@ -366,26 +406,88 @@ public class ProductAdminController : Controller
                 TempData["Warning"] = BuildSkippedImagesMessage(skipped);
         }
 
+        UpsertProductTranslations(product, model);
+        await _productService.UpdateProductAsync(product);
+
         TempData["Success"] = "Ürün güncellendi.";
         return RedirectToAction("Edit", new { id });
+    }
+
+    // Üçü de (yükle/sil/ana-yap) JSON döner — Edit.cshtml'de tam sayfa reload olmadan,
+    // fetch ile çağrılıp DOM'u yerinde güncellemek için.
+
+    [HttpPost("duzenle/{id:int}/gorsel-yukle")]
+    [ValidateAntiForgeryToken]
+    [RequestFormLimits(MultipartBodyLengthLimit = 104_857_600)]
+    [RequestSizeLimit(104_857_600)]
+    public async Task<IActionResult> UploadImages(int id, List<IFormFile>? files, int? mainIndex)
+    {
+        var product = await _productService.GetProductForAdminEditAsync(id);
+        if (product is null) return NotFound();
+
+        var uploadedImages = new List<Core.Entities.ProductImage>();
+        var skipped = new List<string>();
+
+        if (files?.Any() == true)
+        {
+            var hasMain = product.Images.Any(i => i.IsMain);
+            var order = product.Images.Any() ? product.Images.Max(i => i.DisplayOrder) + 1 : 0;
+
+            for (var i = 0; i < files.Count; i++)
+            {
+                var file = files[i];
+                var validationError = _fileService.GetImageValidationError(file.FileName, file.Length);
+                if (validationError is not null) { skipped.Add($"{file.FileName}: {validationError}"); continue; }
+                await using var stream = file.OpenReadStream();
+                if (!_fileService.IsValidImageContent(stream)) { skipped.Add($"{file.FileName}: {DescribeContentValidationFailure(stream)}"); continue; }
+                var url = await _fileService.UploadImageAsync(stream, file.FileName);
+
+                // mainIndex, yeni yüklenen dosyalardan hangisinin (yıldızla seçilen) ana görsel
+                // olacağını belirtir — o gelmezse ürünün hiç görseli yoksa ilk yüklenen ana olur.
+                var isMain = mainIndex.HasValue ? mainIndex.Value == i : !hasMain;
+                if (isMain)
+                {
+                    foreach (var existing in product.Images) existing.IsMain = false;
+                    product.MainImageUrl = url;
+                    hasMain = true;
+                }
+
+                var productImage = new Core.Entities.ProductImage
+                {
+                    ProductId = product.Id,
+                    ImageUrl = url,
+                    AltText = product.Name,
+                    IsMain = isMain,
+                    DisplayOrder = order++
+                };
+                product.Images.Add(productImage);
+                uploadedImages.Add(productImage);
+            }
+
+            // Id'ler SaveChanges'ten önce 0'dır (EF autoincrement) — yanıt DTO'su bu yüzden
+            // kaydettikten SONRA, artık gerçek Id'leri taşıyan aynı entity referanslarından kurulur.
+            if (uploadedImages.Any())
+                await _productService.UpdateProductAsync(product);
+        }
+
+        var uploaded = uploadedImages.Select(img => new { id = img.Id, url = img.ImageUrl, isMain = img.IsMain });
+        return Json(new { success = skipped.Count == 0, images = uploaded, errors = skipped });
     }
 
     [HttpPost("gorsel-sil/{imageId:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteImage(int imageId, int productId)
     {
-        await _productService.DeleteProductImageAsync(imageId);
-        TempData["Success"] = "Görsel silindi.";
-        return RedirectToAction("Edit", new { id = productId });
+        var ok = await _productService.DeleteProductImageAsync(imageId);
+        return Json(new { success = ok });
     }
 
     [HttpPost("gorsel-ana-yap/{imageId:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetMainImage(int imageId, int productId)
     {
-        await _productService.SetMainProductImageAsync(productId, imageId);
-        TempData["Success"] = "Ana görsel güncellendi.";
-        return RedirectToAction("Edit", new { id = productId });
+        var ok = await _productService.SetMainProductImageAsync(productId, imageId);
+        return Json(new { success = ok });
     }
 
     [HttpPost("sil/{id:int}")]
@@ -459,7 +561,7 @@ public class CategoryAdminController : Controller
         }
 
         var slug = await _slugService.GenerateUniqueSlugAsync(model.Name, "category");
-        await _categoryService.CreateCategoryAsync(new Core.Entities.Category
+        var category = new Core.Entities.Category
         {
             Name = model.Name,
             Slug = slug,
@@ -467,7 +569,11 @@ public class CategoryAdminController : Controller
             ParentId = model.ParentId,
             IsActive = model.IsActive,
             DisplayOrder = model.DisplayOrder
-        });
+        };
+        await _categoryService.CreateCategoryAsync(category);
+
+        UpsertCategoryTranslations(category, model);
+        await _categoryService.UpdateCategoryAsync(category);
 
         TempData["Success"] = "Kategori eklendi.";
         return RedirectToAction("Index");
@@ -476,7 +582,7 @@ public class CategoryAdminController : Controller
     [HttpGet("duzenle/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
-        var category = await _categoryService.GetCategoryByIdAsync(id);
+        var category = await _categoryService.GetCategoryForAdminEditAsync(id);
         if (category is null) return NotFound();
 
         // Ekleme/düzenleme aynı formu (Create.cshtml, Model.Id ile mod ayrımı) kullanır.
@@ -491,8 +597,15 @@ public class CategoryAdminController : Controller
             IsActive = category.IsActive,
             DisplayOrder = category.DisplayOrder,
             ImageUrl = category.ImageUrl,
-            ParentCategories = await _categoryService.GetActiveCategoriesAsync()
+            ParentCategories = await _categoryService.GetActiveCategoriesAsync(),
+            EN = ToCategoryFields(category.Translations.FirstOrDefault(t => t.LanguageCode == "en")),
+            RU = ToCategoryFields(category.Translations.FirstOrDefault(t => t.LanguageCode == "ru")),
+            DE = ToCategoryFields(category.Translations.FirstOrDefault(t => t.LanguageCode == "de"))
         });
+
+        static TranslationFieldsViewModel ToCategoryFields(Core.Entities.CategoryTranslation? t) => t is null
+            ? new TranslationFieldsViewModel()
+            : new TranslationFieldsViewModel { Name = t.Name, Description = t.Description };
     }
 
     [HttpPost("duzenle/{id:int}")]
@@ -505,7 +618,7 @@ public class CategoryAdminController : Controller
             return View("Create", model);
         }
 
-        var category = await _categoryService.GetCategoryByIdAsync(id);
+        var category = await _categoryService.GetCategoryForAdminEditAsync(id);
         if (category is null) return NotFound();
 
         category.Name = model.Name;
@@ -513,10 +626,40 @@ public class CategoryAdminController : Controller
         category.ParentId = model.ParentId;
         category.IsActive = model.IsActive;
         category.DisplayOrder = model.DisplayOrder;
+
+        UpsertCategoryTranslations(category, model);
         await _categoryService.UpdateCategoryAsync(category);
 
         TempData["Success"] = "Kategori güncellendi.";
         return RedirectToAction("Index");
+    }
+
+    /// <summary>ProductAdminController.UpsertProductTranslations ile aynı mantık — ad boş
+    /// bırakılırsa o dilin çevirisi silinir.</summary>
+    private static void UpsertCategoryTranslations(Core.Entities.Category category, AdminCategoryViewModel model)
+    {
+        var incoming = new (string Code, TranslationFieldsViewModel Fields)[]
+        {
+            ("en", model.EN), ("ru", model.RU), ("de", model.DE)
+        };
+
+        foreach (var (code, fields) in incoming)
+        {
+            var existing = category.Translations.FirstOrDefault(t => t.LanguageCode == code);
+            if (string.IsNullOrWhiteSpace(fields.Name))
+            {
+                if (existing is not null) category.Translations.Remove(existing);
+                continue;
+            }
+
+            if (existing is null)
+            {
+                existing = new Core.Entities.CategoryTranslation { CategoryId = category.Id, LanguageCode = code };
+                category.Translations.Add(existing);
+            }
+            existing.Name = fields.Name.Trim();
+            existing.Description = string.IsNullOrWhiteSpace(fields.Description) ? null : fields.Description.Trim();
+        }
     }
 
     [HttpPost("sil/{id:int}")]

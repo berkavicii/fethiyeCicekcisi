@@ -1,4 +1,5 @@
 using FethiyeCicekcisi.Application.Services;
+using FethiyeCicekcisi.Core.Interfaces.Repositories;
 using FethiyeCicekcisi.Web.ViewModels.Cart;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +9,14 @@ namespace FethiyeCicekcisi.Web.Controllers;
 public class CartController : Controller
 {
     private readonly CartService _cartService;
+    private readonly IDeliveryZoneRepository _zoneRepo;
     private const string SessionIdKey = "cart_session_id";
 
-    public CartController(CartService cartService) => _cartService = cartService;
+    public CartController(CartService cartService, IDeliveryZoneRepository zoneRepo)
+    {
+        _cartService = cartService;
+        _zoneRepo = zoneRepo;
+    }
 
     private string? GetUserId() => User.Identity?.IsAuthenticated == true
         ? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -39,7 +45,8 @@ public class CartController : Controller
         {
             Items = items,
             // Teslimat ücreti bölgeye göre ödeme adımında belirlenir.
-            ShippingCost = 0
+            ShippingCost = 0,
+            Zones = await _zoneRepo.GetActiveAsync()
         };
         return View(vm);
     }

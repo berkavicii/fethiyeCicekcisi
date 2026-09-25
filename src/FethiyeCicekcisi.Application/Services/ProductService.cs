@@ -179,6 +179,9 @@ public class CategoryService
 
     public Task<Category?> GetCategoryByIdAsync(int id) => _categoryRepo.GetByIdAsync(id);
 
+    /// <summary>Admin düzenleme ekranı için — EN/RU/DE çeviri alanları dahil.</summary>
+    public Task<Category?> GetCategoryForAdminEditAsync(int id) => _categoryRepo.GetByIdWithTranslationsAsync(id);
+
     public Task<Category?> GetCategoryBySlugAsync(string slug) => _categoryRepo.GetBySlugAsync(slug);
 
     // Category'de Product'taki gibi global query filter yok; silme IsDeleted bayrağıyla

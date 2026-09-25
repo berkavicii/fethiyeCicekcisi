@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using FethiyeCicekcisi.Core.Entities;
 using FethiyeCicekcisi.Core.Enums;
+using FethiyeCicekcisi.Web.Validation;
 
 namespace FethiyeCicekcisi.Web.ViewModels.Order;
 
@@ -43,14 +44,15 @@ public class CheckoutViewModel
     [Display(Name = "Alıcı Telefonu")]
     public string RecipientPhone { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Teslimat adresi zorunludur.")]
+    [Display(Name = "Teslimat Yöntemi")]
+    public DeliveryType DeliveryType { get; set; } = DeliveryType.Teslimat;
+
     [Display(Name = "Teslimat Adresi")]
     public string RecipientAddressLine1 { get; set; } = string.Empty;
 
     [Display(Name = "Adres (Devam)")]
     public string? RecipientAddressLine2 { get; set; }
 
-    [Required(ErrorMessage = "Teslimat bölgesi seçiniz.")]
     [Display(Name = "Teslimat Bölgesi")]
     public int? DeliveryZoneId { get; set; }
 
@@ -72,6 +74,10 @@ public class CheckoutViewModel
 
     [Display(Name = "Sipariş Notu")]
     public string? Notes { get; set; }
+
+    [MustBeTrue(ErrorMessage = "Ödemeye geçmek için Mesafeli Satış Sözleşmesi'ni onaylamanız gerekmektedir.")]
+    [Display(Name = "Sözleşme Onayı")]
+    public bool AgreeToDistanceSalesContract { get; set; }
 
     public IEnumerable<DeliveryZone> Zones { get; set; } = new List<DeliveryZone>();
 

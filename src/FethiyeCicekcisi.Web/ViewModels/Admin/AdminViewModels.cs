@@ -4,7 +4,7 @@ using FethiyeCicekcisi.Core.Enums;
 
 namespace FethiyeCicekcisi.Web.ViewModels.Admin;
 
-public class AdminProductViewModel
+public class AdminProductViewModel : IHasTranslationFields
 {
     public int Id { get; set; }
 
@@ -63,6 +63,35 @@ public class AdminProductViewModel
     public IEnumerable<Occasion>? Occasions { get; set; }
     public List<AdminVariantViewModel> Variants { get; set; } = new();
     public List<ProductImage>? ExistingImages { get; set; }
+
+    // Diğer diller — boş bırakılan alan çeviri yoktur, ürün o dilde Türkçe gösterilir
+    // (bkz. ProductLocalizationExtensions). Admin formunda EN/RU/DE.Name/ShortDescription/
+    // Description şeklinde field adlarıyla bağlanır.
+    public TranslationFieldsViewModel EN { get; set; } = new();
+    public TranslationFieldsViewModel RU { get; set; } = new();
+    public TranslationFieldsViewModel DE { get; set; } = new();
+}
+
+/// <summary>Ürün/kategori admin formlarındaki EN/RU/DE sekmelerinin ortak alan kümesi.
+/// Kategoride ShortDescription kullanılmaz, boş kalır.</summary>
+public class TranslationFieldsViewModel
+{
+    [MaxLength(200)]
+    public string? Name { get; set; }
+
+    [MaxLength(500)]
+    public string? ShortDescription { get; set; }
+
+    public string? Description { get; set; }
+}
+
+/// <summary>Paylaşılan _TranslationTabs.cshtml partial'ının bağlanabilmesi için — hem
+/// AdminProductViewModel hem AdminCategoryViewModel bunu implemente eder.</summary>
+public interface IHasTranslationFields
+{
+    TranslationFieldsViewModel EN { get; }
+    TranslationFieldsViewModel RU { get; }
+    TranslationFieldsViewModel DE { get; }
 }
 
 public class AdminVariantViewModel
@@ -78,7 +107,7 @@ public class AdminVariantViewModel
     public bool IsDeleted { get; set; }
 }
 
-public class AdminCategoryViewModel
+public class AdminCategoryViewModel : IHasTranslationFields
 {
     public int Id { get; set; }
 
@@ -101,6 +130,10 @@ public class AdminCategoryViewModel
     public string? ImageUrl { get; set; }
 
     public IEnumerable<Category>? ParentCategories { get; set; }
+
+    public TranslationFieldsViewModel EN { get; set; } = new();
+    public TranslationFieldsViewModel RU { get; set; } = new();
+    public TranslationFieldsViewModel DE { get; set; } = new();
 }
 
 public class AdminOccasionViewModel

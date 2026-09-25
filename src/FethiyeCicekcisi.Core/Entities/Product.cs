@@ -38,6 +38,7 @@ public class Product : BaseEntity
     public ICollection<ProductOccasion> ProductOccasions { get; set; } = new List<ProductOccasion>();
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    public ICollection<ProductTranslation> Translations { get; set; } = new List<ProductTranslation>();
 
     public decimal CurrentPrice => DiscountPrice.HasValue && DiscountPrice.Value < Price
         ? DiscountPrice.Value

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FethiyeCicekcisi.Web.Validation;
 
 namespace FethiyeCicekcisi.Web.ViewModels.Account;
 
@@ -46,6 +47,10 @@ public class RegisterViewModel
     [Compare("Password", ErrorMessage = "Şifreler eşleşmiyor.")]
     [Display(Name = "Şifre Tekrar")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    [MustBeTrue(ErrorMessage = "Üyelik Sözleşmesi'ni ve KVKK Aydınlatma Metni'ni onaylamanız gerekmektedir.")]
+    [Display(Name = "Sözleşme Onayı")]
+    public bool AgreeToMembershipTerms { get; set; }
 }
 
 public class ForgotPasswordViewModel

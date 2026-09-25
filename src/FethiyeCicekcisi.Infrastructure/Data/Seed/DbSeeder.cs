@@ -3,6 +3,7 @@ using FethiyeCicekcisi.Core.Enums;
 using FethiyeCicekcisi.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,10 @@ public static class DbSeeder
                 await context.Database.EnsureCreatedAsync();
 
             await SeedRolesAsync(roleManager);
-            await SeedAdminUserAsync(userManager);
+            await SeedAdminUserAsync(userManager,
+                scope.ServiceProvider.GetRequiredService<IConfiguration>(),
+                scope.ServiceProvider.GetRequiredService<IHostEnvironment>(),
+                logger);
             await SeedCategoriesAsync(context);
             await SeedOccasionsAsync(context);
             await SeedDeliveryZonesAsync(context);
@@ -315,9 +319,26 @@ public static class DbSeeder
         }
     }
 
-    private static async Task SeedAdminUserAsync(UserManager<AppUser> userManager)
+    /// <summary>Admin hesabı config'den gelir (prod'da Admin__Email / Admin__Password ortam
+    /// değişkenleri). Config boşsa yalnızca Development'ta bilinen lokal varsayılan kullanılır;
+    /// Production'da zayıf varsayılan hesap OLUŞTURULMAZ, uyarı loglanır.</summary>
+    private static async Task SeedAdminUserAsync(UserManager<AppUser> userManager, IConfiguration config, IHostEnvironment env, ILogger logger)
     {
-        const string adminEmail = "admin@yoncacicekcilik.com";
+        var adminEmail = config["Admin:Email"];
+        var adminPassword = config["Admin:Password"];
+
+        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            if (!env.IsDevelopment())
+            {
+                logger.LogWarning("Admin:Email / Admin:Password tanımlı değil — admin hesabı seed edilmedi. " +
+                                  "Sunucuda Admin__Email ve Admin__Password ortam değişkenlerini tanımlayın.");
+                return;
+            }
+            adminEmail = "admin@fethiyecicekcisi.com";
+            adminPassword = "Admin@123456";
+        }
+
         if (await userManager.FindByEmailAsync(adminEmail) is not null) return;
 
         var admin = new AppUser
@@ -329,9 +350,12 @@ public static class DbSeeder
             EmailConfirmed = true
         };
 
-        var result = await userManager.CreateAsync(admin, "Admin@123456");
+        var result = await userManager.CreateAsync(admin, adminPassword);
         if (result.Succeeded)
             await userManager.AddToRoleAsync(admin, "Admin");
+        else
+            logger.LogError("Admin hesabı oluşturulamadı: {Errors}",
+                string.Join("; ", result.Errors.Select(e => e.Description)));
     }
 
     /// <summary>Navigasyondaki "Koleksiyon" menüsü bu sabit kategorilere link verir (slug ile),

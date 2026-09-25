@@ -17,6 +17,10 @@ public class Order : BaseEntity
     public string? PromoCode { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
+    /// <summary>Adrese teslimat mı yoksa mağazadan ücretsiz gel-al mı — GelAl seçiliyse
+    /// ShippingCost her zaman 0'dır ve alıcı adresi mağaza adresidir.</summary>
+    public DeliveryType DeliveryType { get; set; } = DeliveryType.Teslimat;
+
     // Gönderen (siparişi veren / ödeyen) — çiçek siparişinde teslimat adresi çoğu
     // zaman başka birine ait olduğu için alıcıdan ayrı tutulur.
     public string SenderName { get; set; } = string.Empty;

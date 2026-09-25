@@ -5,7 +5,7 @@
     var isEdit = Model.Id != 0;
 }
 
-<div style="max-width:640px">
+<div style="max-width:760px">
     <form asp-controller="CategoryAdmin" asp-action="@(isEdit ? "Edit" : "Create")" method="post" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
         @if (isEdit)
@@ -48,6 +48,12 @@
                 </div>
             </div>
         </div>
+
+        @{
+            var categoryTabsViewData = new ViewDataDictionary(ViewData);
+            categoryTabsViewData["ShowShortDescription"] = false;
+        }
+        <partial name="_TranslationTabs" model="Model" view-data="categoryTabsViewData" />
 
         <div class="d-flex gap-2 mt-3">
             <button type="submit" class="btn btn-dark">Kaydet</button>

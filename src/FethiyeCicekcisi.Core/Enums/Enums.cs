@@ -40,11 +40,22 @@ public enum DeliveryTimeSlot
     [Display(Name = "Seçiniz")]
     Belirtilmemis = 0,
 
-    [Display(Name = "13:00 – 17:00")]
+    [Display(Name = "09:00 – 13:00")]
     Ogle_13_17 = 1,
 
-    [Display(Name = "17:00 – 21:00")]
+    [Display(Name = "13:30 – 20:00")]
     Aksam_17_21 = 2
+}
+
+/// <summary>Teslimat yöntemi — adrese teslim ile ücretsiz mağazadan teslim alma arasındaki
+/// seçim. GelAl seçilince teslimat bölgesi/ücreti uygulanmaz.</summary>
+public enum DeliveryType
+{
+    [Display(Name = "Adrese Teslimat")]
+    Teslimat = 0,
+
+    [Display(Name = "Mağazadan Gel Al")]
+    GelAl = 1
 }
 
 public enum PromoDiscountType

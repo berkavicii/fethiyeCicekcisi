@@ -1,0 +1,51 @@
+@{
+    ViewData["Title"] = "Gizlilik ve Güvenlik";
+}
+
+<section class="bg-beige">
+    <div class="container text-center" style="padding-top:4rem;padding-bottom:3rem">
+        <p class="section-tag">Yasal</p>
+        <h1 class="section-title mb-0">Gizlilik ve <em>Güvenlik</em></h1>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="legal-content mx-auto">
+        <p>Yonca Çiçekçilik'te müşterilerimizin verilerinin ve alışveriş deneyiminin güvenliği önceliğimizdir. Aşağıda, ilgili tüm yasal metinlere ulaşabilirsiniz.</p>
+
+        <ol>
+            <li>
+                <strong>Kişisel Verilerin Korunması</strong><br />
+                Kişisel verileriniz nasıl işleniyor, kimlerle paylaşılıyor ve haklarınız nelerdir:
+                <a asp-controller="Legal" asp-action="KvkkNotice">KVKK Aydınlatma Metni</a>
+            </li>
+            <li>
+                <strong>Çerezler</strong><br />
+                Sitede hangi çerezlerin, hangi amaçla kullanıldığı: <a asp-controller="Legal" asp-action="CookiePolicy">Çerez Politikası</a>
+            </li>
+            <li>
+                <strong>Ödeme Güvenliği</strong><br />
+                Ödemeleriniz, kart bilgilerinizi tarafımızda saklamayan, 3D Secure korumalı bir sanal POS altyapısı üzerinden güvenle alınır.
+            </li>
+            <li>
+                <strong>Üyelik ve Hesap Güvenliği</strong><br />
+                E-posta/şifre veya Google hesabınızla üye olabilirsiniz. Detaylar için <a asp-controller="Legal" asp-action="MembershipAgreement">Üyelik Sözleşmesi</a>.
+            </li>
+            <li>
+                <strong>Alışveriş ve Sözleşmeler</strong><br />
+                Sipariş verirken kabul ettiğiniz sözleşme: <a asp-controller="Legal" asp-action="DistanceSalesContract">Mesafeli Satış Sözleşmesi</a>
+            </li>
+            <li>
+                <strong>İptal, İade, Değişim ve Teslimat</strong><br />
+                <a asp-controller="Legal" asp-action="CancellationRefundPolicy">İptal, İade ve Değişim Politikası</a> ·
+                <a asp-controller="Legal" asp-action="ShippingPolicy">Teslimat Koşulları</a>
+            </li>
+            <li>
+                <strong>Kullanım Şartları ve Telif Hakları</strong><br />
+                <a asp-controller="Legal" asp-action="TermsOfUse">Kullanım Şartları</a>
+            </li>
+        </ol>
+
+        <p class="text-muted" style="font-size:.85rem">Sorularınız için info@fethiyecicekcisi.com adresinden bize ulaşabilirsiniz.</p>
+    </div>
+</div>

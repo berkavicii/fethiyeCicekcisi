@@ -38,6 +38,8 @@
                 </div>
             </div>
 
+            <partial name="_TranslationTabs" model="Model" />
+
             <!-- Variants -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -66,7 +68,7 @@
                     <h6 class="mb-0 fw-600">Ürün Görselleri</h6>
                 </div>
                 <div class="card-body">
-                    <input type="file" name="images" class="form-control" multiple accept="image/*" capture="environment" data-image-input />
+                    <input type="file" name="images" class="form-control" multiple accept="image/*" data-image-input />
                     <small class="text-muted">İlk yüklenen görsel ana görsel olarak ayarlanır. Maks 10MB / görsel. JPG, PNG, WEBP, GIF desteklenir — iPhone HEIC/HEIF fotoğrafları otomatik olarak JPEG'e dönüştürülür.</small>
                     <div class="row g-2 mt-1" data-image-preview></div>
                 </div>

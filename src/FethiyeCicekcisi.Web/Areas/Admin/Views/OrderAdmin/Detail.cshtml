@@ -18,6 +18,17 @@
                     <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Saat Aralığı</div>
                     <strong>@Model.DeliveryTimeSlot.ToDisplayName()</strong>
                 </div>
+                <div>
+                    <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Teslimat Yöntemi</div>
+                    @if (Model.DeliveryType == DeliveryType.GelAl)
+                    {
+                        <span class="status-badge status-processing"><i class="bi bi-shop me-1"></i>Mağazadan Gel Al</span>
+                    }
+                    else
+                    {
+                        <strong>Adrese Teslimat</strong>
+                    }
+                </div>
                 @if (Model.IsAnonymousSender)
                 {
                     <div>
@@ -85,7 +96,7 @@
                     }
                     <div class="d-flex justify-content-between mb-2" style="font-size:.85rem">
                         <span class="text-muted">Teslimat</span>
-                        <span>@(Model.ShippingCost == 0 ? "Ücretsiz" : Model.ShippingCost.ToString("N2") + " ₺")</span>
+                        <span>@(Model.DeliveryType == DeliveryType.GelAl ? "Ücretsiz (Gel Al)" : (Model.ShippingCost == 0 ? "Ücretsiz" : Model.ShippingCost.ToString("N2") + " ₺"))</span>
                     </div>
                     <div class="d-flex justify-content-between fw-600">
                         <span>Toplam</span>
@@ -117,7 +128,10 @@
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-white py-3">
-                        <h6 class="mb-0 fw-600"><i class="bi bi-geo-alt me-2"></i>Alıcı (Teslimat)</h6>
+                        <h6 class="mb-0 fw-600">
+                            <i class="bi bi-geo-alt me-2"></i>
+                            @(Model.DeliveryType == DeliveryType.GelAl ? "Alıcı (Mağazadan Gel Al)" : "Alıcı (Teslimat)")
+                        </h6>
                     </div>
                     <div class="card-body" style="font-size:.88rem">
                         <strong>@Model.RecipientFirstName @Model.RecipientLastName</strong><br />

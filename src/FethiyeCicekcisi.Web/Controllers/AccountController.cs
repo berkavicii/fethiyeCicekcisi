@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using FethiyeCicekcisi.Application.Services;
 using FethiyeCicekcisi.Core.Entities;
 using FethiyeCicekcisi.Core.Interfaces.Services;
 using FethiyeCicekcisi.Web.ViewModels.Account;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -29,11 +31,15 @@ public class AccountController : Controller
         _emailService = emailService;
     }
 
+    private async Task<bool> IsGoogleEnabledAsync() =>
+        (await _signInManager.GetExternalAuthenticationSchemesAsync()).Any(s => s.Name == GoogleDefaults.AuthenticationScheme);
+
     [HttpGet("giris")]
-    public IActionResult Login(string? returnUrl = null)
+    public async Task<IActionResult> Login(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Index", "Home");
+        ViewBag.GoogleEnabled = await IsGoogleEnabledAsync();
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
@@ -41,6 +47,8 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
+        ViewBag.GoogleEnabled = await IsGoogleEnabledAsync();
+
         if (!ModelState.IsValid) return View(model);
 
         var result = await _signInManager.PasswordSignInAsync(
@@ -82,7 +90,7 @@ public class AccountController : Controller
     }
 
     [HttpGet("kayit")]
-    public IActionResult Register()
+    public async Task<IActionResult> Register()
     {
         if (User.Identity?.IsAuthenticated == true)
         {
@@ -90,6 +98,7 @@ public class AccountController : Controller
                 return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
             return RedirectToAction("Index", "Home");
         }
+        ViewBag.GoogleEnabled = await IsGoogleEnabledAsync();
         return View();
     }
 
@@ -97,6 +106,8 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
+        ViewBag.GoogleEnabled = await IsGoogleEnabledAsync();
+
         if (!ModelState.IsValid) return View(model);
 
         var user = new AppUser
@@ -138,6 +149,98 @@ public class AccountController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
 
         return View(model);
+    }
+
+    [HttpGet("google-giris")]
+    public IActionResult GoogleLogin(string? returnUrl = null)
+    {
+        var redirectUrl = Url.Action("GoogleCallback", "Account", new { returnUrl })!;
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(GoogleDefaults.AuthenticationScheme, redirectUrl);
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("google-giris-tamamla")]
+    public async Task<IActionResult> GoogleCallback(string? returnUrl = null)
+    {
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info is null)
+        {
+            TempData["Error"] = "Google ile giriş başarısız oldu.";
+            return RedirectToAction("Login");
+        }
+
+        // Daha önce bu Google hesabıyla bağlanmış bir kullanıcı varsa doğrudan giriş yap.
+        var signInResult = await _signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+
+        AppUser? user;
+        if (signInResult.Succeeded)
+        {
+            user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+        }
+        else
+        {
+            // İlk kez Google ile geliyor: aynı e-postayla mevcut hesap varsa ona bağla,
+            // yoksa yeni hesap oluştur. Google zaten e-postayı doğruladığı için
+            // EmailConfirmed doğrudan true set edilir (SMTP zorunluluğunu atlar).
+            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(email))
+            {
+                TempData["Error"] = "Google hesabınızdan e-posta bilgisi alınamadı.";
+                return RedirectToAction("Login");
+            }
+
+            user = await _userManager.FindByEmailAsync(email);
+            if (user is null)
+            {
+                user = new AppUser
+                {
+                    FirstName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "Kullanıcı",
+                    LastName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "",
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    TempData["Error"] = string.Join(" ", createResult.Errors.Select(e => e.Description));
+                    return RedirectToAction("Login");
+                }
+
+                await _userManager.AddToRoleAsync(user, "Customer");
+            }
+            else if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await _userManager.UpdateAsync(user);
+            }
+
+            var addLoginResult = await _userManager.AddLoginAsync(user, info);
+            if (!addLoginResult.Succeeded)
+            {
+                TempData["Error"] = "Google hesabı bağlanamadı.";
+                return RedirectToAction("Login");
+            }
+
+            await _signInManager.SignInAsync(user, isPersistent: false);
+        }
+
+        if (user is null) return RedirectToAction("Login");
+
+        var sessionId = HttpContext.Session.GetString(SessionIdKey);
+        if (!string.IsNullOrEmpty(sessionId))
+            await _cartService.MigrateGuestCartAsync(sessionId, user.Id);
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+
+        if (await _userManager.IsInRoleAsync(user, "Admin"))
+            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+
+        return RedirectToAction("Index", "Home");
     }
 
     [HttpGet("email-dogrula")]

@@ -1,0 +1,51 @@
+[Unit]
+Description=Fethiye Çiçekçisi (Yonca Çiçekçilik) ASP.NET Core Uygulaması
+After=network.target postgresql.service
+
+[Service]
+Type=notify
+WorkingDirectory=/var/www/fethiyecicekcisi
+ExecStart=/usr/bin/dotnet /var/www/fethiyecicekcisi/FethiyeCicekcisi.Web.dll
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+SyslogIdentifier=fethiyecicekcisi
+User=www-data
+
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+
+# --- Veritabanı (Postgres aynı VPS'te, yalnızca localhost'tan erişilebilir) ---
+Environment=ConnectionStrings__DefaultConnection=Host=127.0.0.1;Port=5432;Database=yonca_cicekcilik;Username=yonca_app;Password=DEĞİŞTİR_GÜÇLÜ_ŞİFRE
+
+# --- Admin hesabı (DbSeeder bunlar boşsa Production'da hesap OLUŞTURMAZ) ---
+Environment=Admin__Email=DEĞİŞTİR
+Environment=Admin__Password=DEĞİŞTİR_GÜÇLÜ_ŞİFRE
+
+# --- Google ile Devam Et (boşsa buton hiç gösterilmez) ---
+Environment=Authentication__Google__ClientId=DEĞİŞTİR
+Environment=Authentication__Google__ClientSecret=DEĞİŞTİR
+
+# --- SMTP ---
+Environment=Smtp__Host=DEĞİŞTİR
+Environment=Smtp__Port=465
+Environment=Smtp__Username=info@fethiyecicekcisi.com
+Environment=Smtp__Password=DEĞİŞTİR
+Environment=Smtp__UseSsl=true
+
+# --- Cloudflare R2 ---
+Environment=R2__AccountId=DEĞİŞTİR
+Environment=R2__AccessKeyId=DEĞİŞTİR
+Environment=R2__SecretAccessKey=DEĞİŞTİR
+Environment=R2__BucketName=yoncacicekcilik
+Environment=R2__PublicBaseUrl=DEĞİŞTİR
+
+# --- Ödeme (banka kararı netleşince PayTR yerine seçilen bankanın değişkenleriyle
+#     güncellenecek; şimdilik PayTR TestMode=true ile placeholder) ---
+Environment=PayTR__MerchantId=DEĞİŞTİR
+Environment=PayTR__MerchantKey=DEĞİŞTİR
+Environment=PayTR__MerchantSalt=DEĞİŞTİR
+Environment=PayTR__TestMode=true
+
+[Install]
+WantedBy=multi-user.target

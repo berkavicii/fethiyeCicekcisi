@@ -297,6 +297,21 @@
         if (hasHeic) setInputFiles(input, entries.map(e => e.file));
         renderPreview(input, preview, entries);
     });
+
+    // "Google Translate'te Aç" — ürün/kategori formlarındaki EN/RU/DE sekmelerinde, Türkçe
+    // alandaki metni yeni sekmede translate.google.com'a gönderir; admin çeviriyi oradan
+    // kopyalayıp geri yapıştırır. Sitede Google'ın kendi widget'ı ÇALIŞTIRILMIYOR (performans
+    // sorunlarına yol açıyordu) — bu sadece admin panelinde, tek tıkla dış bir kısayol.
+    function kwOpenGoogleTranslate(sourceFieldId, targetLangCode) {
+        var sourceEl = document.getElementById(sourceFieldId);
+        var text = sourceEl ? sourceEl.value.trim() : '';
+        if (!text) {
+            alert('Önce Türkçe alanı doldurun.');
+            return;
+        }
+        var url = 'https://translate.google.com/?sl=tr&tl=' + targetLangCode + '&text=' + encodeURIComponent(text) + '&op=translate';
+        window.open(url, '_blank', 'noopener');
+    }
 </script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -1,20 +1,37 @@
 @model FethiyeCicekcisi.Web.ViewModels.Product.ProductListViewModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 @{
-    ViewData["Title"] = Model.OccasionName ?? Model.CategoryName ?? "Çiçekler";
+    var listName = Model.OccasionName ?? Model.CategoryName ?? "Çiçekler";
+    ViewData["Title"] = listName;
+    ViewData["Description"] = $"{listName} — Yonca Çiçekçilik'te {Model.TotalCount} taze çiçek tasarımı arasından seçin, Fethiye içi aynı gün teslimat veya ücretsiz mağazadan teslim alma.";
+
+    // Arama sonucu ve sıralama/beden filtreleriyle üretilen sayfalar, kategori/özel gün
+    // sayfalarıyla neredeyse aynı ürün kümesini farklı URL'lerde tekrar ettiği için thin/duplicate
+    // content sayılabilir — indekslenmesin ama linkler takip edilsin diye noindex,follow verilir.
+    var isFilteredOrSearch = !string.IsNullOrWhiteSpace(Model.SearchTerm) || !string.IsNullOrWhiteSpace(Model.SelectedSize) || Model.CurrentPage > 1;
+    if (isFilteredOrSearch)
+        ViewData["Robots"] = "noindex, follow";
 }
 
 <div class="container py-5">
     <div class="row mb-5 align-items-end reveal">
         <div class="col">
-            <p class="section-tag mb-2">@(Model.OccasionName != null ? "Özel Gün" : "Koleksiyon")</p>
-            <h1 class="section-title mb-2">@(Model.OccasionName ?? Model.CategoryName ?? "Tüm Çiçekler")</h1>
-            <p class="text-muted mb-0" style="font-size:.85rem;font-style:italic;font-family:var(--font-serif)">@Model.TotalCount tasarım</p>
+            <p class="section-tag mb-2">@(Model.OccasionName != null ? L["Özel Gün"] : L["Koleksiyon"])</p>
+            <h1 class="section-title mb-2">@(Model.OccasionName ?? Model.CategoryName ?? L["Tüm Çiçekler"])</h1>
+            <p class="text-muted mb-0" style="font-size:.85rem;font-style:italic;font-family:var(--font-serif)">@Model.TotalCount @L["tasarım"]</p>
         </div>
     </div>
 
     <div class="row g-4 g-lg-5">
         <!-- Sidebar Filters -->
         <div class="col-md-3">
+            <button type="button" class="filter-toggle-btn d-flex d-md-none align-items-center justify-content-between w-100 mb-4 collapsed"
+                    data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="false" aria-controls="filterSidebar">
+                <span><i class="bi bi-sliders me-2"></i>@L["Filtrele"]</span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="collapse filter-sidebar-collapse" id="filterSidebar">
             <form method="get" asp-controller="Product" asp-action="Index">
                 @* Arama/sıralama form submit'i seçili kategori, özel gün ve seçeneği kaybetmesin *@
                 @if (Model.SelectedCategoryId.HasValue)
@@ -31,24 +48,24 @@
                 }
                 <!-- Search -->
                 <div class="filter-block">
-                    <label class="section-tag">Ara</label>
-                    <input type="text" name="ara" value="@Model.SearchTerm" class="form-control form-control-kw mt-2" placeholder="Çiçek ara...">
+                    <label class="section-tag">@L["Ara"]</label>
+                    <input type="text" name="ara" value="@Model.SearchTerm" class="form-control form-control-kw mt-2" placeholder="@L["Çiçek ara..."]">
                 </div>
 
                 <!-- Categories -->
                 <div class="filter-block">
-                    <label class="section-tag">Kategori</label>
+                    <label class="section-tag">@L["Kategori"]</label>
                     <div class="d-flex flex-column gap-2 mt-3">
                         <a asp-controller="Product" asp-action="Index"
                            class="filter-link @(Model.SelectedCategoryId == null && Model.SelectedOccasionId == null ? "active" : "")">
-                            Tümü
+                            @L["Tümü"]
                         </a>
                         @foreach (var cat in Model.Categories)
                         {
                             <a asp-controller="Product" asp-action="Index" asp-route-kategori="@cat.Id"
                                asp-route-secenek="@Model.SelectedSize"
                                class="filter-link @(Model.SelectedCategoryId == cat.Id ? "active" : "")">
-                                @cat.Name
+                                @cat.GetLocalizedName()
                             </a>
                         }
                     </div>
@@ -58,7 +75,7 @@
                 @if (Model.Occasions.Any())
                 {
                     <div class="filter-block">
-                        <label class="section-tag">Özel Gün</label>
+                        <label class="section-tag">@L["Özel Gün"]</label>
                         <div class="d-flex flex-wrap gap-2 mt-3">
                             @foreach (var occasion in Model.Occasions)
                             {
@@ -80,7 +97,7 @@
                 @if (Model.AvailableSizes.Any())
                 {
                     <div class="filter-block">
-                        <label class="section-tag">Seçenek</label>
+                        <label class="section-tag">@L["Seçenek"]</label>
                         <div class="d-flex flex-wrap gap-2 mt-3">
                             @foreach (var size in Model.AvailableSizes)
                             {
@@ -102,19 +119,20 @@
 
                 <!-- Sort -->
                 <div class="filter-block">
-                    <label class="section-tag">Sırala</label>
+                    <label class="section-tag">@L["Sırala"]</label>
                     <select name="sirala" class="form-select form-control-kw mt-2" onchange="this.form.submit()">
-                        <option value="">Varsayılan</option>
-                        <option value="newest" selected="@(Model.SortBy == "newest")">En Yeni</option>
-                        <option value="price_asc" selected="@(Model.SortBy == "price_asc")">Fiyat (Düşük-Yüksek)</option>
-                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">Fiyat (Yüksek-Düşük)</option>
+                        <option value="">@L["Varsayılan"]</option>
+                        <option value="newest" selected="@(Model.SortBy == "newest")">@L["En Yeni"]</option>
+                        <option value="price_asc" selected="@(Model.SortBy == "price_asc")">@L["Fiyat (Düşük-Yüksek)"]</option>
+                        <option value="price_desc" selected="@(Model.SortBy == "price_desc")">@L["Fiyat (Yüksek-Düşük)"]</option>
                     </select>
                 </div>
                 @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.SelectedCategoryId.HasValue || Model.SelectedOccasionId.HasValue || !string.IsNullOrEmpty(Model.SelectedSize))
                 {
-                    <a asp-controller="Product" asp-action="Index" class="link-quiet" style="font-size:.68rem">Filtreleri Temizle ×</a>
+                    <a asp-controller="Product" asp-action="Index" class="link-quiet" style="font-size:.68rem">@L["Filtreleri Temizle"] ×</a>
                 }
             </form>
+            </div>
         </div>
 
         <!-- Product Grid -->
@@ -123,8 +141,8 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-flower1 fs-1 text-muted d-block mb-3"></i>
-                    <p class="text-muted">Aradığınız kriterlere uygun çiçek bulunamadı.</p>
-                    <a asp-controller="Product" asp-action="Index" class="btn-kw-outline mt-2">Tüm Çiçeklere Git</a>
+                    <p class="text-muted">@L["Aradığınız kriterlere uygun çiçek bulunamadı."]</p>
+                    <a asp-controller="Product" asp-action="Index" class="btn-kw-outline mt-2">@L["Tüm Çiçeklere Git"]</a>
                 </div>
             }
             else
@@ -138,7 +156,7 @@
                                     <div class="product-card-image">
                                         @if (!string.IsNullOrEmpty(product.MainImageUrl))
                                         {
-                                            <img src="@product.MainImageUrl" alt="@product.Name" loading="lazy" />
+                                            <img src="@product.MainImageUrl" alt="@product.GetLocalizedName()" loading="lazy" />
                                         }
                                         else
                                         {
@@ -148,16 +166,16 @@
                                         }
                                         @if (product.IsOnSale)
                                         {
-                                            <span class="product-badge product-badge-sale">İndirim</span>
+                                            <span class="product-badge product-badge-sale">@L["İndirim"]</span>
                                         }
                                         else if (product.IsSameDayDelivery)
                                         {
-                                            <span class="product-badge">Aynı Gün</span>
+                                            <span class="product-badge">@L["Aynı Gün"]</span>
                                         }
                                     </div>
                                     <div class="product-card-body">
-                                        <div class="product-category">@product.Category?.Name</div>
-                                        <div class="product-name" title="@product.Name">@product.Name</div>
+                                        <div class="product-category">@product.Category?.GetLocalizedName()</div>
+                                        <div class="product-name" title="@product.GetLocalizedName()">@product.GetLocalizedName()</div>
                                         <div class="mt-1">
                                             @if (product.IsOnSale)
                                             {

@@ -41,6 +41,10 @@ public interface ICategoryRepository : IRepository<Category>
     Task<Category?> GetBySlugAsync(string slug);
     Task<IEnumerable<Category>> GetActiveAsync();
     Task<Category?> GetWithProductsAsync(int id);
+
+    /// <summary>Admin düzenleme ekranı için — EN/RU/DE çeviri alanlarını doldurabilmek üzere
+    /// Translations dahil edilir (GetByIdAsync bunu içermez).</summary>
+    Task<Category?> GetByIdWithTranslationsAsync(int id);
 }
 
 public interface IOccasionRepository : IRepository<Occasion>

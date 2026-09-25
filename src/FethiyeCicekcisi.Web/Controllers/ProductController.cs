@@ -1,4 +1,6 @@
 using FethiyeCicekcisi.Application.Services;
+using FethiyeCicekcisi.Core.Entities;
+using FethiyeCicekcisi.Core.Interfaces.Repositories;
 using FethiyeCicekcisi.Web.ViewModels.Product;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,12 +12,18 @@ public class ProductController : Controller
     private readonly ProductService _productService;
     private readonly CategoryService _categoryService;
     private readonly OccasionService _occasionService;
+    private readonly IDeliveryZoneRepository _zoneRepo;
 
-    public ProductController(ProductService productService, CategoryService categoryService, OccasionService occasionService)
+    public ProductController(
+        ProductService productService,
+        CategoryService categoryService,
+        OccasionService occasionService,
+        IDeliveryZoneRepository zoneRepo)
     {
         _productService = productService;
         _categoryService = categoryService;
         _occasionService = occasionService;
+        _zoneRepo = zoneRepo;
     }
 
     [HttpGet("")]
@@ -37,7 +45,7 @@ public class ProductController : Controller
         if (kategori.HasValue)
         {
             var cat = await _categoryService.GetCategoryByIdAsync(kategori.Value);
-            categoryName = cat?.Name;
+            categoryName = cat?.GetLocalizedName();
         }
 
         var vm = new ProductListViewModel
@@ -82,7 +90,7 @@ public class ProductController : Controller
             TotalPages = totalPages,
             TotalCount = totalCount,
             SelectedCategoryId = category.Id,
-            CategoryName = category.Name,
+            CategoryName = category.GetLocalizedName(),
             SortBy = sirala,
             SelectedSize = secenek,
             AvailableSizes = availableSizes
@@ -128,11 +136,14 @@ public class ProductController : Controller
         if (product is null) return NotFound();
 
         var related = await _productService.GetPagedProductsAsync(1, 4, product.CategoryId);
+        var today = DateOnly.FromDateTime(DateTime.Now);
 
         var vm = new ProductDetailViewModel
         {
             Product = product,
-            RelatedProducts = related.Products.Where(p => p.Id != product.Id).Take(3)
+            RelatedProducts = related.Products.Where(p => p.Id != product.Id).Take(3),
+            Zones = await _zoneRepo.GetActiveAsync(),
+            MinDeliveryDate = product.IsSameDayDelivery ? today : today.AddDays(1)
         };
 
         return View(vm);

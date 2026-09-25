@@ -1,0 +1,57 @@
+name: Deploy to Production
+
+# main'e her push, uygulamayı derleyip VPS'teki /var/www/fethiyecicekcisi'e kopyalar ve servisi
+# yeniden başlatır. wwwroot/uploads (R2 öncesinden kalma yerel görseller, varsa) deploy
+# sırasında dokunulmaz — hem senkronize edilmez hem silinmez.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish
+        run: dotnet publish src/FethiyeCicekcisi.Web/FethiyeCicekcisi.Web.csproj -c Release -o publish
+
+      - name: Secret'ları doğrula (içerik değil, sadece uzunluk loglanır)
+        run: |
+          echo "DEPLOY_HOST uzunluğu: ${#DEPLOY_HOST}"
+          echo "DEPLOY_USER uzunluğu: ${#DEPLOY_USER}"
+          echo "DEPLOY_SSH_KEY uzunluğu: ${#DEPLOY_SSH_KEY}"
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::error::Bir veya daha fazla secret boş — GitHub repo Settings > Secrets and variables > Actions kısmını kontrol edin."
+            exit 1
+          fi
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: SSH anahtarını hazırla
+        # DEPLOY_SSH_KEY, çok satırlı PEM yerine tek satır base64 olarak saklanıyor —
+        # GitHub'ın secret metin kutusu çok satırlı değerlerde satır sonlarını bozup
+        # "error in libcrypto" hatasına yol açıyordu; base64 buna karşı bağışık.
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "Decoded key first line: $(head -n1 ~/.ssh/deploy_key)"
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || echo "::error::ssh-keyscan başarısız oldu — DEPLOY_HOST değeri doğru mu (sadece IP/domain, http:// veya port olmadan)?"
+
+      - name: Dosyaları sunucuya kopyala
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            --exclude 'wwwroot/uploads' \
+            publish/ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/fethiyecicekcisi/"
+
+      - name: Servisi yeniden başlat
+        run: ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" 'sudo systemctl restart fethiyecicekcisi'

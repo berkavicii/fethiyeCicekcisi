@@ -270,6 +270,34 @@ main{animation:pageEnter .6s var(--ease) both}
 .variant-btn:hover,.variant-btn.active{background:var(--kw-ink);color:var(--kw-cream);border-color:var(--kw-ink)}
 .variant-btn:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
 
+/* Seçenek listesi — fiyatı sağda gösteren radio-satır stili */
+.option-list{display:flex;flex-direction:column;gap:.5rem}
+.option-row{width:100%;display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;text-align:left}
+.option-row-radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--kw-border);flex-shrink:0;position:relative;transition:border-color var(--transition)}
+.option-row.active .option-row-radio,.option-row:hover:not(:disabled) .option-row-radio{border-color:var(--kw-cream)}
+.option-row.active .option-row-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--kw-cream)}
+.option-row-label{flex-grow:1;font-size:.85rem}
+.option-row-price{font-size:.85rem;font-variant-numeric:tabular-nums;font-weight:500}
+
+/* Ürün sayfasındaki teslimat bölgesi/tarih önizleme kartı */
+.delivery-picker-card{border:1px solid var(--kw-hairline);border-radius:var(--radius-sm);background:var(--kw-light);padding:1.25rem}
+.date-pill-group{display:flex;gap:.5rem;flex-wrap:wrap}
+.date-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;border:1px solid var(--kw-border);background:var(--kw-white);color:var(--kw-ink);border-radius:var(--radius-sm);padding:.5rem .85rem;font-size:.72rem;cursor:pointer;transition:all var(--transition);min-width:64px}
+.date-pill:hover,.date-pill.active{background:var(--kw-ink);color:var(--kw-cream);border-color:var(--kw-ink)}
+.date-pill-label{font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.date-pill-sub{font-size:.68rem;opacity:.75}
+.date-pill-calendar{flex-direction:row;gap:.4rem;font-weight:500}
+
+.urgency-badge{display:inline-flex;align-items:center;font-size:.78rem;font-weight:500;padding:.5rem .85rem;border-radius:var(--radius-sm);width:100%}
+.urgency-badge-ok{background:var(--kw-sage-soft);color:var(--kw-sage)}
+.urgency-badge-soon{background:var(--kw-accent-soft);color:var(--kw-accent-dark)}
+.urgency-badge-urgent{background:var(--kw-accent-dark);color:var(--kw-white)}
+.urgency-badge-muted{background:var(--kw-beige-2);color:var(--kw-gray)}
+
+.trust-row-compact{display:flex;flex-wrap:wrap;gap:.6rem 1rem;padding-top:.9rem;border-top:1px solid var(--kw-hairline)}
+.trust-row-compact span{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--kw-gray)}
+.trust-row-compact i{color:var(--kw-accent-dark)}
+
 /* Detail accordion — hairline, small-caps headers */
 .accordion-kw .accordion-item{background:transparent;border:none;border-top:1px solid var(--kw-hairline)}
 .accordion-kw .accordion-button{background:transparent;font-size:.76rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--kw-ink);padding:1.1rem 0;box-shadow:none}
@@ -374,6 +402,17 @@ main{animation:pageEnter .6s var(--ease) both}
 .stat-counter{font-family:var(--font-display);font-size:clamp(2rem,3.6vw,2.9rem);font-weight:450;color:var(--kw-ink);line-height:1;font-variant-numeric:tabular-nums}
 .stat-label{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--kw-gray);margin-top:.6rem}
 
+/* ---------- Legal pages ---------- */
+.legal-content{max-width:760px;font-size:.92rem;line-height:1.75;color:var(--kw-ink)}
+.legal-content p,.legal-content ul,.legal-content ol{margin-bottom:1.1rem}
+.legal-content strong{font-weight:600}
+.legal-content a{color:var(--kw-accent-dark);text-decoration:underline}
+
+/* ---------- Cookie banner ---------- */
+.cookie-banner{position:fixed;left:0;right:0;bottom:0;z-index:1050;background:var(--kw-ink);color:rgba(255,253,249,.85);padding:.9rem 1.25rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:1rem;font-size:.82rem}
+.cookie-banner a{color:var(--kw-white);text-decoration:underline}
+.cookie-banner-btn{background:var(--kw-white);color:var(--kw-ink);border:0;border-radius:var(--radius-pill);padding:.5rem 1.4rem;font-size:.82rem;font-weight:600;white-space:nowrap}
+
 /* ---------- Footer ---------- */
 .site-footer{background:var(--kw-ink);color:rgba(255,253,249,.6)}
 .footer-statement{font-family:var(--font-display);font-style:italic;font-size:1.05rem;font-weight:350;color:rgba(255,253,249,.85);line-height:1.6}
@@ -399,6 +438,18 @@ main{animation:pageEnter .6s var(--ease) both}
 .filter-link:hover{color:var(--kw-ink);padding-left:4px}
 .filter-link.active{color:var(--kw-ink);font-weight:500}
 .filter-link.active::before{content:'—';margin-right:.5rem;color:var(--kw-accent)}
+
+/* Mobile filter toggle — collapses the whole sidebar behind a button on small
+   screens; from md up the sidebar always stays open regardless of collapse state. */
+.filter-toggle-btn{background:var(--kw-white);border:1px solid var(--kw-border);border-radius:var(--radius-sm);padding:.85rem 1.1rem;font-size:.85rem;font-weight:500;color:var(--kw-ink)}
+.filter-toggle-btn i.bi-chevron-down{transition:transform var(--transition)}
+.filter-toggle-btn:not(.collapsed) i.bi-chevron-down{transform:rotate(180deg)}
+@media (max-width:767.98px){
+    .filter-sidebar-collapse{background:var(--kw-white);border:1px solid var(--kw-border);border-radius:var(--radius-sm);padding:1.25rem 1.25rem .25rem;margin-bottom:.5rem}
+}
+@media (min-width:768px){
+    .filter-sidebar-collapse{display:block!important;height:auto!important;visibility:visible!important}
+}
 
 /* Breadcrumbs */
 .breadcrumb{--bs-breadcrumb-divider:'/'}
@@ -434,3 +485,8 @@ main{animation:pageEnter .6s var(--ease) both}
    sınıfıyla) — boş kırmızı kutu görünmesin. jquery-validate de aynı sınıfları
    değiştirdiği için client-side doğrulamada da kutu doğru anda açılıp kapanır. */
 .validation-summary-valid{display:none}
+
+/* Admin: ürün/kategori formundaki EN/RU/DE dil sekmeleri (_TranslationTabs.cshtml) */
+.lang-tab-nav .nav-link{border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;color:#495057;background:#f1f3f5;margin-right:.4rem;border:1px solid transparent;transition:all .15s}
+.lang-tab-nav .nav-link:hover{background:#e9ecef}
+.lang-tab-nav .nav-link.active{background:#212529;color:#fff}

@@ -13,4 +13,5 @@ public class Category : BaseEntity
 
     public ICollection<Category> Children { get; set; } = new List<Category>();
     public ICollection<Product> Products { get; set; } = new List<Product>();
+    public ICollection<CategoryTranslation> Translations { get; set; } = new List<CategoryTranslation>();
 }

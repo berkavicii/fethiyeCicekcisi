@@ -25,7 +25,7 @@ public static class EmailTemplates
                             {{bodyHtml}}
                         </td></tr>
                         <tr><td style="padding:20px 32px;border-top:1px solid #eee">
-                            <span style="font-size:12px;color:#888">Bu e-posta Yonca Çiçekçilik tarafından gönderilmiştir. Sorularınız için info@yoncacicekcilik.com</span>
+                            <span style="font-size:12px;color:#888">Bu e-posta Yonca Çiçekçilik tarafından gönderilmiştir. Sorularınız için info@fethiyecicekcisi.com</span>
                         </td></tr>
                     </table>
                 </td></tr>
@@ -38,15 +38,25 @@ public static class EmailTemplates
         <a href="{url}" style="display:inline-block;background:{Ink};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:999px;font-size:14px;font-weight:600;letter-spacing:.03em">{text}</a>
         """;
 
-    private static string DeliveryInfoBlock(Order order) => $"""
+    private static string DeliveryInfoBlock(Order order)
+    {
+        var isPickup = order.DeliveryType == DeliveryType.GelAl;
+        var addressLabel = isPickup ? "Teslim Alınacak Adres" : "Adres";
+        var addressValue = isPickup
+            ? $"{order.RecipientAddressLine1}, {order.RecipientDistrict}/{order.RecipientCity} <em>(Mağazadan Gel Al — ücretsiz)</em>"
+            : $"{order.RecipientAddressLine1}, {order.RecipientDistrict}/{order.RecipientCity}";
+
+        return $"""
         <table width="100%" cellpadding="6" cellspacing="0" style="margin:16px 0;background:#f7f4ee;border-radius:10px;font-size:14px">
-            <tr><td style="color:#888;width:130px">Teslimat Tarihi</td><td><strong>{order.DeliveryDate:dd.MM.yyyy}</strong></td></tr>
+            <tr><td style="color:#888;width:130px">Teslimat Yöntemi</td><td><strong>{order.DeliveryType.ToDisplayName()}</strong></td></tr>
+            <tr><td style="color:#888">Teslimat Tarihi</td><td><strong>{order.DeliveryDate:dd.MM.yyyy}</strong></td></tr>
             <tr><td style="color:#888">Saat Aralığı</td><td>{order.DeliveryTimeSlot.ToDisplayName()}</td></tr>
             <tr><td style="color:#888">Alıcı</td><td>{order.RecipientFirstName} {order.RecipientLastName} — {order.RecipientPhone}</td></tr>
-            <tr><td style="color:#888">Adres</td><td>{order.RecipientAddressLine1}, {order.RecipientDistrict}/{order.RecipientCity}</td></tr>
+            <tr><td style="color:#888">{addressLabel}</td><td>{addressValue}</td></tr>
             {(string.IsNullOrWhiteSpace(order.CardMessage) ? "" : $"""<tr><td style="color:#888">Kart Notu</td><td style="font-style:italic">"{order.CardMessage}"</td></tr>""")}
         </table>
         """;
+    }
 
     public static string ConfirmEmail(string firstName, string confirmUrl) => Layout("E-postanızı doğrulayın", $"""
         <h2 style="margin:0 0 16px;font-size:22px">Merhaba {firstName},</h2>

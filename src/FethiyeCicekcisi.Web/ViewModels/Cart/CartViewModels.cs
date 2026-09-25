@@ -11,6 +11,7 @@ public class CartViewModel
     public int ItemCount => Items.Sum(i => i.Quantity);
     public decimal FreeShippingThreshold { get; set; } = 500;
     public decimal RemainingForFreeShipping => Math.Max(0, FreeShippingThreshold - SubTotal);
+    public IEnumerable<DeliveryZone> Zones { get; set; } = new List<DeliveryZone>();
 }
 
 public class AddToCartViewModel

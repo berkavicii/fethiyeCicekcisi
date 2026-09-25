@@ -1,0 +1,115 @@
+@model FethiyeCicekcisi.Web.ViewModels.Admin.IHasTranslationFields
+@{
+    // Kategori formunda ShortDescription alanı yok — Product'ta gösterilir, Category'de gizlenir.
+    var showShortDescription = ViewData["ShowShortDescription"] as bool? ?? true;
+
+    var tabs = new (string Code, string Flag, string Label)[]
+    {
+        ("EN", "🇬🇧", "English"),
+        ("RU", "🇷🇺", "Русский"),
+        ("DE", "🇩🇪", "Deutsch")
+    };
+}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="mb-1 fw-600">Diğer Diller</h6>
+        <small class="text-muted" style="font-size:.78rem">
+            İsteğe bağlı — bir dilde ad boş bırakılırsa müşteri o dilde de Türkçe metni görür.
+            Her alanın yanındaki <i class="bi bi-google"></i> "Çevir" bağlantısı, Türkçe metni yeni
+            sekmede Google Translate'e gönderir; oradan kopyalayıp buraya yapıştırabilirsiniz.
+        </small>
+    </div>
+    <div class="card-body">
+        <ul class="nav nav-pills lang-tab-nav mb-3" role="tablist">
+            @for (var i = 0; i < tabs.Length; i++)
+            {
+                var t = tabs[i];
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(i == 0 ? "active" : "")" id="langtab-@t.Code-btn" data-bs-toggle="pill"
+                            data-bs-target="#langtab-@t.Code" type="button" role="tab">
+                        <span class="me-1">@t.Flag</span>@t.Label
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="tab-content">
+            @for (var i = 0; i < tabs.Length; i++)
+            {
+                var t = tabs[i];
+                var langCode = t.Code.ToLowerInvariant();
+                <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="langtab-@t.Code" role="tabpanel">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label fw-500 mb-1" style="font-size:.85rem">Ürün/Kategori Adı</label>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" style="font-size:.72rem"
+                                    onclick="kwOpenGoogleTranslate('Name', '@langCode')">
+                                <i class="bi bi-google me-1"></i>Çevir
+                            </button>
+                        </div>
+                        @if (t.Code == "EN")
+                        {
+                            <input asp-for="EN.Name" class="form-control" />
+                        }
+                        else if (t.Code == "RU")
+                        {
+                            <input asp-for="RU.Name" class="form-control" />
+                        }
+                        else
+                        {
+                            <input asp-for="DE.Name" class="form-control" />
+                        }
+                    </div>
+
+                    @if (showShortDescription)
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label fw-500 mb-1" style="font-size:.85rem">Kısa Açıklama</label>
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" style="font-size:.72rem"
+                                        onclick="kwOpenGoogleTranslate('ShortDescription', '@langCode')">
+                                    <i class="bi bi-google me-1"></i>Çevir
+                                </button>
+                            </div>
+                            @if (t.Code == "EN")
+                            {
+                                <textarea asp-for="EN.ShortDescription" class="form-control" rows="2"></textarea>
+                            }
+                            else if (t.Code == "RU")
+                            {
+                                <textarea asp-for="RU.ShortDescription" class="form-control" rows="2"></textarea>
+                            }
+                            else
+                            {
+                                <textarea asp-for="DE.ShortDescription" class="form-control" rows="2"></textarea>
+                            }
+                        </div>
+                    }
+
+                    <div class="mb-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label fw-500 mb-1" style="font-size:.85rem">Açıklama</label>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" style="font-size:.72rem"
+                                    onclick="kwOpenGoogleTranslate('Description', '@langCode')">
+                                <i class="bi bi-google me-1"></i>Çevir
+                            </button>
+                        </div>
+                        @if (t.Code == "EN")
+                        {
+                            <textarea asp-for="EN.Description" class="form-control" rows="4"></textarea>
+                        }
+                        else if (t.Code == "RU")
+                        {
+                            <textarea asp-for="RU.Description" class="form-control" rows="4"></textarea>
+                        }
+                        else
+                        {
+                            <textarea asp-for="DE.Description" class="form-control" rows="4"></textarea>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

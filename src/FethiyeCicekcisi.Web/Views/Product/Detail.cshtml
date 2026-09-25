@@ -1,4 +1,8 @@
+@using System.Text.Json
+@using Microsoft.Extensions.Localization
 @model FethiyeCicekcisi.Web.ViewModels.Product.ProductDetailViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@inject IStringLocalizer<SharedResource> L
 @{
     ViewData["Title"] = Model.Product.Name;
     var product = Model.Product;
@@ -7,23 +11,55 @@
     var images = product.Images.OrderBy(i => i.DisplayOrder).ToList();
     var mainImage = images.FirstOrDefault(i => i.IsMain) ?? images.FirstOrDefault();
     var isPurchasable = product.Variants.Any(v => v.IsActive && v.StockQuantity > 0);
-    var occasions = product.ProductOccasions.Select(po => po.Occasion).Where(o => o.IsActive && !o.IsDeleted).ToList();
+
+    var siteUrl = (Configuration["SiteSettings:SiteUrl"] ?? "https://www.fethiyecicekcisi.com").TrimEnd('/');
+    var absoluteImageUrl = mainImage?.ImageUrl ?? product.MainImageUrl;
+    if (!string.IsNullOrEmpty(absoluteImageUrl) && !absoluteImageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        absoluteImageUrl = $"{siteUrl}{absoluteImageUrl}";
+    ViewData["OgImage"] = absoluteImageUrl;
+    ViewData["Description"] = !string.IsNullOrWhiteSpace(product.ShortDescription)
+        ? product.ShortDescription
+        : $"{product.Name} — Yonca Çiçekçilik'te {product.CurrentPrice:N0} ₺'den başlayan fiyatlarla, Fethiye içi aynı gün teslimat veya ücretsiz mağazadan teslim alma seçeneğiyle.";
+
+    // "@" C# tanımlayıcı adlarında property ismi olarak kullanılamadığından anonim tip yerine
+    // Dictionary ile kuruluyor — JSON-LD'nin "@context"/"@type" anahtarları böylece doğrudan yazılabilir.
+    var offersJsonLd = new Dictionary<string, object?>
+    {
+        ["@type"] = "Offer",
+        ["priceCurrency"] = "TRY",
+        ["price"] = product.CurrentPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+        ["availability"] = isPurchasable ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        ["url"] = $"{siteUrl}/urunler/{product.Slug}"
+    };
+    var productJsonLd = new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "Product",
+        ["name"] = product.Name,
+        ["description"] = string.IsNullOrWhiteSpace(product.ShortDescription) ? product.Name : product.ShortDescription,
+        ["image"] = string.IsNullOrEmpty(absoluteImageUrl) ? null : new[] { absoluteImageUrl },
+        ["sku"] = product.Code,
+        ["offers"] = offersJsonLd
+    };
+    var productJsonLdJson = JsonSerializer.Serialize(productJsonLd);
 }
+
+<script type="application/ld+json">@Html.Raw(productJsonLdJson)</script>
 
 @Html.AntiForgeryToken()
 
 <div class="container py-5">
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb" style="font-size:.8rem">
-            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Ana Sayfa</a></li>
-            <li class="breadcrumb-item"><a asp-controller="Product" asp-action="Index">Çiçekler</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Product" asp-action="Index">@L["Çiçekler"]</a></li>
             @if (product.Category != null)
             {
                 <li class="breadcrumb-item">
-                    <a asp-controller="Product" asp-action="Category" asp-route-slug="@product.Category.Slug">@product.Category.Name</a>
+                    <a asp-controller="Product" asp-action="Category" asp-route-slug="@product.Category.Slug">@product.Category.GetLocalizedName()</a>
                 </li>
             }
-            <li class="breadcrumb-item active" aria-current="page">@product.Name</li>
+            <li class="breadcrumb-item active" aria-current="page">@product.GetLocalizedName()</li>
         </ol>
     </nav>
 
@@ -33,7 +69,7 @@
             <div class="product-gallery-main mb-3">
                 <img id="mainProductImage"
                      src="@(mainImage?.ImageUrl ?? product.MainImageUrl ?? "/images/products/placeholder.jpg")"
-                     alt="@product.Name"
+                     alt="@product.GetLocalizedName()"
                      onerror="this.src='/images/products/placeholder.jpg'" />
             </div>
             @if (images.Count > 1)
@@ -42,7 +78,7 @@
                     @foreach (var img in images)
                     {
                         <img src="@img.ImageUrl"
-                             alt="@(img.AltText ?? product.Name)"
+                             alt="@(img.AltText ?? product.GetLocalizedName())"
                              class="product-thumb @(img == mainImage ? "active" : "")"
                              onerror="this.src='/images/products/placeholder.jpg'" />
                     }
@@ -53,18 +89,29 @@
         <!-- Product Info -->
         <div class="col-lg-6 reveal" style="transition-delay:.1s">
             <div class="product-info-sticky">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
                 @if (product.Category != null)
                 {
-                    <p class="text-muted mb-0" style="font-size:.72rem;letter-spacing:.22em;text-transform:uppercase">@product.Category.Name</p>
+                    <p class="text-muted mb-0" style="font-size:.72rem;letter-spacing:.22em;text-transform:uppercase">@product.Category.GetLocalizedName()</p>
                 }
-                @if (!string.IsNullOrEmpty(product.Code))
-                {
-                    <p class="text-muted mb-0" style="font-size:.72rem;letter-spacing:.08em">Ürün Kodu: <span style="font-family:monospace">@product.Code</span></p>
-                }
+                <p class="text-muted mb-0" style="font-size:.74rem">
+                    @if (!string.IsNullOrEmpty(product.Code))
+                    {
+                        <span>@L["Ürün Kodu"]: <span style="font-family:monospace">@product.Code</span></span>
+                        <span class="mx-1">|</span>
+                    }
+                    @if (isPurchasable)
+                    {
+                        <span style="color:var(--kw-sage)"><i class="bi bi-check-circle-fill me-1"></i>@L["Stokta Var"]</span>
+                    }
+                    else
+                    {
+                        <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>@L["Tükendi"]</span>
+                    }
+                </p>
             </div>
 
-            <h1 class="product-detail-name mb-3">@product.Name</h1>
+            <h1 class="product-detail-name mb-3">@product.GetLocalizedName()</h1>
 
             <div class="mb-3">
                 @if (product.IsOnSale)
@@ -82,29 +129,29 @@
             <div class="d-flex flex-wrap gap-2 mb-4">
                 @if (product.IsSameDayDelivery)
                 {
-                    <span class="feature-chip feature-chip-accent"><i class="bi bi-lightning-charge"></i> Aynı Gün Teslimat</span>
+                    <span class="feature-chip feature-chip-accent"><i class="bi bi-lightning-charge"></i> @L["Aynı Gün Teslimat"]</span>
                 }
                 @if (product.ContainsVase)
                 {
-                    <span class="feature-chip"><i class="bi bi-cup"></i> Vazo/Saksı Dahil</span>
+                    <span class="feature-chip"><i class="bi bi-cup"></i> @L["Vazo/Saksı Dahil"]</span>
                 }
                 @if (product.AllowsMessageCard)
                 {
-                    <span class="feature-chip"><i class="bi bi-envelope-heart"></i> Not Kartı Eklenebilir</span>
+                    <span class="feature-chip"><i class="bi bi-envelope-heart"></i> @L["Not Kartı Eklenebilir"]</span>
                 }
             </div>
 
             @if (!string.IsNullOrEmpty(product.ShortDescription))
             {
-                <p class="text-muted mb-4" style="font-size:.9rem;line-height:1.7">@product.ShortDescription</p>
+                <p class="text-muted mb-4" style="font-size:.9rem;line-height:1.7">@product.GetLocalizedShortDescription()</p>
             }
 
             <!-- Option Selection -->
             @if (options.Any())
             {
                 <div class="mb-4">
-                    <p class="mb-2" style="font-size:.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Seçenek</p>
-                    <div class="d-flex gap-2 flex-wrap">
+                    <p class="mb-2" style="font-size:.82rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase">@L["Seçenek"]</p>
+                    <div class="option-list">
                         @{
                             var firstInStockOption = options.FirstOrDefault(s =>
                                 product.Variants.Any(v => v.Size == s && v.IsActive && v.StockQuantity > 0));
@@ -114,13 +161,15 @@
                             var optionVariant = product.Variants.FirstOrDefault(v => v.Size == option && v.IsActive);
                             var inStock = optionVariant?.StockQuantity > 0;
                             var optionPrice = product.CurrentPrice + (optionVariant?.PriceDifference ?? 0);
-                            <button class="variant-btn @(!inStock ? "disabled" : "") @(option == firstInStockOption ? "active" : "")"
+                            <button type="button"
+                                    class="option-row variant-btn @(!inStock ? "disabled" : "") @(option == firstInStockOption ? "active" : "")"
                                     data-variant-group="size"
                                     data-variant-id="@optionVariant?.Id"
                                     data-stock="@(optionVariant?.StockQuantity ?? 0)"
-                                    title="@optionPrice.ToString("N2") ₺"
                                     @(inStock ? "" : "disabled")>
-                                @option
+                                <span class="option-row-radio"></span>
+                                <span class="option-row-label">@option@(inStock ? "" : " — " + L["Tükendi"])</span>
+                                <span class="option-row-price">@optionPrice.ToString("N2") ₺</span>
                             </button>
                         }
                     </div>
@@ -130,6 +179,66 @@
             <input type="hidden" id="selectedVariantId"
                    value="@(product.Variants.FirstOrDefault(v => v.IsActive && v.StockQuantity > 0)?.Id)" />
 
+            <!-- Teslimat bölgesi + tarih önizlemesi — asıl seçim yine Checkout'ta onaylanır,
+                 burada yapılan seçim sessionStorage ile Checkout'a taşınıp otomatik doldurulur. -->
+            <div class="delivery-picker-card mb-4">
+                <p class="mb-3 d-flex align-items-center gap-2" style="font-size:.82rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase">
+                    <i class="bi bi-truck" style="color:var(--kw-accent-dark)"></i> @L["Teslimat Bilgileri"]
+                </p>
+
+                <label for="pdpZoneSelect" class="form-label" style="font-size:.78rem;font-weight:500">@L["Teslimat Bölgesi"]</label>
+                <select id="pdpZoneSelect" class="form-select form-control-kw mb-3" style="font-size:.85rem">
+                    <option value="">@L["Bölge seçiniz..."]</option>
+                    @foreach (var zone in Model.Zones)
+                    {
+                        <option value="@zone.Id" data-fee="@zone.Fee.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            @zone.City — @zone.Name (+@zone.Fee.ToString("N0") ₺)
+                        </option>
+                    }
+                    <option value="pickup" data-fee="0">@L["Mağazadan Gel Al"] (@L["ücretsiz"])</option>
+                </select>
+
+                <label class="form-label" style="font-size:.78rem;font-weight:500">@L["Teslimat Tarihi"]</label>
+                <div class="date-pill-group mb-3" id="pdpDatePills">
+                    @{
+                        var trCulture = new System.Globalization.CultureInfo("tr-TR");
+                        var dateOptions = new[]
+                        {
+                            (Date: Model.MinDeliveryDate, Label: Model.MinDeliveryDate == DateOnly.FromDateTime(DateTime.Now) ? L["Bugün"].Value : L["En Erken"].Value),
+                            (Date: Model.MinDeliveryDate.AddDays(1), Label: trCulture.DateTimeFormat.GetAbbreviatedDayName(Model.MinDeliveryDate.AddDays(1).ToDateTime(TimeOnly.MinValue).DayOfWeek)),
+                            (Date: Model.MinDeliveryDate.AddDays(2), Label: trCulture.DateTimeFormat.GetAbbreviatedDayName(Model.MinDeliveryDate.AddDays(2).ToDateTime(TimeOnly.MinValue).DayOfWeek))
+                        };
+                    }
+                    @foreach (var d in dateOptions)
+                    {
+                        <button type="button" class="date-pill" data-date="@d.Date.ToString("yyyy-MM-dd")">
+                            <span class="date-pill-label">@d.Label</span>
+                            <span class="date-pill-sub">@d.Date.ToString("d MMM", trCulture)</span>
+                        </button>
+                    }
+                    <label class="date-pill date-pill-calendar" for="pdpDateInput">
+                        <i class="bi bi-calendar3"></i>
+                        <input type="date" id="pdpDateInput" min="@Model.MinDeliveryDate.ToString("yyyy-MM-dd")" class="d-none" />
+                        @L["Takvim"]
+                    </label>
+                </div>
+
+                <label for="pdpTimeSlot" class="form-label" style="font-size:.78rem;font-weight:500">@L["Teslimat Saati"]</label>
+                <select id="pdpTimeSlot" class="form-select form-control-kw mb-3" style="font-size:.85rem">
+                    <option value="1">09:00 – 13:00</option>
+                    <option value="2">13:30 – 20:00</option>
+                </select>
+
+                <p id="pdpUrgencyBadge" class="urgency-badge mb-3" style="display:none"></p>
+
+                <div class="trust-row-compact">
+                    <span><i class="bi bi-lightning-charge"></i> @L["Hızlı Teslimat"]</span>
+                    <span><i class="bi bi-shield-check"></i> @L["Güvenli Ödeme"]</span>
+                    <span><i class="bi bi-flower2"></i> @L["Taze Çiçek Garantisi"]</span>
+                    <span><i class="bi bi-shop"></i> @L["Gel Al Seçeneği"]</span>
+                </div>
+            </div>
+
             <!-- Add to Cart -->
             <div class="d-flex gap-3 mt-4">
                 @if (isPurchasable)
@@ -138,25 +247,103 @@
                             data-add-cart
                             data-product-id="@product.Id"
                             data-quantity="1"
-                            onclick="window.kwPrepareAddToCart(this)">
-                        Sepete Ekle
+                            onclick="return window.kwPrepareAddToCart(this, event)">
+                        @L["Sepete Ekle"]
                     </button>
                 }
                 else
                 {
                     <button class="btn-kw-dark flex-grow-1" disabled style="opacity:.5;cursor:not-allowed">
-                        Tükendi
+                        @L["Tükendi"]
                     </button>
                 }
             </div>
 
             <script>
-                window.kwPrepareAddToCart = function (btn) {
+                window.kwPrepareAddToCart = function (btn, evt) {
+                    const zoneSelect = document.getElementById('pdpZoneSelect');
+                    if (zoneSelect && !zoneSelect.value) {
+                        evt?.preventDefault();
+                        evt?.stopImmediatePropagation();
+                        zoneSelect.classList.add('is-invalid');
+                        zoneSelect.focus();
+                        zoneSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        window.showToast?.('@L["Lütfen önce teslimat bölgesi seçin."]', 'error');
+                        return false;
+                    }
+                    zoneSelect?.classList.remove('is-invalid');
                     const vid = document.getElementById('selectedVariantId')?.value || '';
                     btn.dataset.variantId = vid;
                     const activeOption = document.querySelector('.variant-btn[data-variant-group=size].active');
                     btn.dataset.sizeLabel = activeOption ? activeOption.textContent.trim() : '';
+                    window.kwSaveDeliveryChoice?.();
+                    return true;
                 };
+            </script>
+
+            <script>
+                // Ürün sayfasında seçilen bölge/tarih/saat, Checkout'a sessionStorage ile taşınır
+                // (Checkout.cshtml sayfa açılışında bunu okuyup formu otomatik doldurur).
+                (function () {
+                    const zoneSelect = document.getElementById('pdpZoneSelect');
+                    const datePills = document.querySelectorAll('#pdpDatePills .date-pill[data-date]');
+                    const dateInput = document.getElementById('pdpDateInput');
+                    const timeSlot = document.getElementById('pdpTimeSlot');
+                    const urgencyBadge = document.getElementById('pdpUrgencyBadge');
+                    const minDate = '@Model.MinDeliveryDate.ToString("yyyy-MM-dd")';
+                    const isSameDayEligible = @(Model.MinDeliveryDate == DateOnly.FromDateTime(DateTime.Now) ? "true" : "false");
+                    let selectedDate = minDate;
+
+                    function selectPill(dateStr) {
+                        selectedDate = dateStr;
+                        datePills.forEach(p => p.classList.toggle('active', p.dataset.date === dateStr));
+                        if (dateInput.value && dateInput.value !== dateStr) dateInput.value = '';
+                        updateUrgency();
+                    }
+
+                    datePills.forEach(p => p.addEventListener('click', () => selectPill(p.dataset.date)));
+                    dateInput?.addEventListener('change', function () {
+                        if (this.value) selectPill(this.value);
+                    });
+                    if (datePills.length) selectPill(datePills[0].dataset.date);
+
+                    // Bugün teslimat, günün son sipariş saatine (20:00) kadar mümkün — seçilen tarih
+                    // bugünse kalan süreyi gösterir, dolmuşsa "bugün için süre doldu" uyarısına döner.
+                    function updateUrgency() {
+                        if (!urgencyBadge) return;
+                        const todayStr = new Date().toISOString().slice(0, 10);
+                        if (!isSameDayEligible || selectedDate !== todayStr) {
+                            urgencyBadge.style.display = 'none';
+                            return;
+                        }
+                        const now = new Date();
+                        const cutoff = new Date();
+                        cutoff.setHours(20, 0, 0, 0);
+                        const diffMs = cutoff - now;
+                        urgencyBadge.style.display = '';
+                        if (diffMs <= 0) {
+                            urgencyBadge.className = 'urgency-badge urgency-badge-muted';
+                            urgencyBadge.innerHTML = '<i class="bi bi-clock-history me-1"></i>@L["Bugün için sipariş süresi doldu — en erken yarın teslim edilir."]';
+                            return;
+                        }
+                        const hours = Math.floor(diffMs / 3600000);
+                        const mins = Math.floor((diffMs % 3600000) / 60000);
+                        const level = diffMs < 30 * 60000 ? 'urgent' : diffMs < 2 * 3600000 ? 'soon' : 'ok';
+                        urgencyBadge.className = 'urgency-badge urgency-badge-' + level;
+                        const remaining = hours > 0 ? `${hours} @L["saat"] ${mins} @L["dk"]` : `${mins} @L["dk"]`;
+                        urgencyBadge.innerHTML = `<i class="bi bi-lightning-charge me-1"></i>@L["Bugün teslimat için son"] <strong>${remaining}</strong>`;
+                    }
+                    updateUrgency();
+                    setInterval(updateUrgency, 60000);
+
+                    window.kwSaveDeliveryChoice = function () {
+                        try {
+                            sessionStorage.setItem('pdp_zone_id', zoneSelect?.value || '');
+                            sessionStorage.setItem('pdp_delivery_date', selectedDate);
+                            sessionStorage.setItem('pdp_time_slot', timeSlot?.value || '1');
+                        } catch (e) { /* localStorage kapalıysa sessizce yok say */ }
+                    };
+                })();
             </script>
 
             @{
@@ -171,24 +358,8 @@
             @if (product.Variants.Any())
             {
                 <p id="stockWarning" class="text-warning mt-2" style="font-size:.82rem; @(initialStock is > 0 and <= 5 ? "" : "display:none")">
-                    <i class="bi bi-exclamation-triangle me-1"></i><span id="stockWarningText">Son @initialStock adet!</span>
+                    <i class="bi bi-exclamation-triangle me-1"></i><span id="stockWarningText">@L["Son"] @initialStock @L["adet!"]</span>
                 </p>
-            }
-
-            <!-- Özel gün etiketleri -->
-            @if (occasions.Any())
-            {
-                <div class="mt-4">
-                    <p class="mb-2" style="font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--kw-gray)">Hangi Günler İçin?</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach (var occasion in occasions)
-                        {
-                            <a asp-controller="Product" asp-action="Occasion" asp-route-slug="@occasion.Slug" class="occasion-chip">
-                                @occasion.Name
-                            </a>
-                        }
-                    </div>
-                </div>
             }
 
             <!-- Product Details accordion -->
@@ -199,11 +370,11 @@
                         <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
                             <h2 class="accordion-header">
                                 <button class="accordion-button ps-0" type="button" data-bs-toggle="collapse" data-bs-target="#descCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
-                                    Ürün Açıklaması
+                                    @L["Ürün Açıklaması"]
                                 </button>
                             </h2>
                             <div id="descCollapse" class="accordion-collapse collapse show">
-                                <div class="accordion-body ps-0 text-muted" style="font-size:.88rem;line-height:1.8">@Html.Raw(product.Description?.Replace("\n", "<br/>"))</div>
+                                <div class="accordion-body ps-0 text-muted" style="font-size:.88rem;line-height:1.8">@Html.Raw(product.GetLocalizedDescription()?.Replace("\n", "<br/>"))</div>
                             </div>
                         </div>
                     }
@@ -212,7 +383,7 @@
                         <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
                             <h2 class="accordion-header">
                                 <button class="accordion-button ps-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#careCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
-                                    Çiçek Bakımı
+                                    @L["Çiçek Bakımı"]
                                 </button>
                             </h2>
                             <div id="careCollapse" class="accordion-collapse collapse">
@@ -225,14 +396,14 @@
                     <div class="accordion-item border-top border-bottom-0 border-start-0 border-end-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button ps-0 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#deliveryCollapse" style="font-size:.85rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:transparent">
-                                Teslimat
+                                @L["Teslimat"]
                             </button>
                         </h2>
                         <div id="deliveryCollapse" class="accordion-collapse collapse">
                             <div class="accordion-body ps-0 text-muted" style="font-size:.88rem;line-height:1.8">
                                 @(product.IsSameDayDelivery
-                                    ? "Bu ürün Fethiye içi aynı gün teslimata uygundur. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz."
-                                    : "Bu ürün için en erken teslimat bir sonraki gündür. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz.")
+                                    ? L["Bu ürün Fethiye içi aynı gün teslimata uygundur. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz."]
+                                    : L["Bu ürün için en erken teslimat bir sonraki gündür. Sipariş sırasında teslimat tarihi ve saat aralığı seçebilirsiniz."])
                             </div>
                         </div>
                     </div>
@@ -246,8 +417,8 @@
     @if (Model.RelatedProducts.Any())
     {
         <div class="mt-6 pt-5 reveal" style="border-top:1px solid var(--kw-hairline)">
-            <p class="section-tag mb-2">Benzer Tasarımlar</p>
-            <h2 class="section-title mb-4" style="font-size:clamp(1.6rem,2.6vw,2.2rem)">Bunları da <em>sevebilirsiniz</em></h2>
+            <p class="section-tag mb-2">@L["Benzer Tasarımlar"]</p>
+            <h2 class="section-title mb-4" style="font-size:clamp(1.6rem,2.6vw,2.2rem)">@Html.Raw(L["Bunları da <em>sevebilirsiniz</em>"])</h2>
             <div class="row row-cols-2 row-cols-md-4 g-3">
                 @foreach (var related in Model.RelatedProducts)
                 {
@@ -257,11 +428,11 @@
                                 <div class="product-card-image">
                                     @if (!string.IsNullOrEmpty(related.MainImageUrl))
                                     {
-                                        <img src="@related.MainImageUrl" alt="@related.Name" loading="lazy" />
+                                        <img src="@related.MainImageUrl" alt="@related.GetLocalizedName()" loading="lazy" />
                                     }
                                 </div>
                                 <div class="product-card-body">
-                                    <div class="product-name">@related.Name</div>
+                                    <div class="product-name">@related.GetLocalizedName()</div>
                                     <div class="product-price">@related.CurrentPrice.ToString("N2") ₺</div>
                                 </div>
                             </div>

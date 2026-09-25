@@ -283,6 +283,47 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.CategoryTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("CategoryTranslations");
+                });
+
             modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.DeliveryZone", b =>
                 {
                     b.Property<int>("Id")
@@ -385,6 +426,9 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                         .HasColumnType("date");
 
                     b.Property<int>("DeliveryTimeSlot")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DeliveryType")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Discount")
@@ -766,6 +810,50 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.ToTable("ProductOccasions");
                 });
 
+            modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.ProductTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShortDescription")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "LanguageCode")
+                        .IsUnique();
+
+                    b.ToTable("ProductTranslations");
+                });
+
             modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.ProductVariant", b =>
                 {
                     b.Property<int>("Id")
@@ -1028,6 +1116,17 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.CategoryTranslation", b =>
+                {
+                    b.HasOne("FethiyeCicekcisi.Core.Entities.Category", "Category")
+                        .WithMany("Translations")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.Order", b =>
                 {
                     b.HasOne("FethiyeCicekcisi.Core.Entities.AppUser", "User")
@@ -1115,6 +1214,17 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.ProductTranslation", b =>
+                {
+                    b.HasOne("FethiyeCicekcisi.Core.Entities.Product", "Product")
+                        .WithMany("Translations")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.ProductVariant", b =>
                 {
                     b.HasOne("FethiyeCicekcisi.Core.Entities.Product", "Product")
@@ -1191,6 +1301,8 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.Navigation("Children");
 
                     b.Navigation("Products");
+
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("FethiyeCicekcisi.Core.Entities.Occasion", b =>
@@ -1214,6 +1326,8 @@ namespace FethiyeCicekcisi.Infrastructure.Data.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("ProductOccasions");
+
+                    b.Navigation("Translations");
 
                     b.Navigation("Variants");
                 });

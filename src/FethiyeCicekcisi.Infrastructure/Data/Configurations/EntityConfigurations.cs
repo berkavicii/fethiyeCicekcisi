@@ -22,6 +22,22 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     }
 }
 
+public class CategoryTranslationConfiguration : IEntityTypeConfiguration<CategoryTranslation>
+{
+    public void Configure(EntityTypeBuilder<CategoryTranslation> builder)
+    {
+        builder.HasKey(ct => ct.Id);
+        builder.Property(ct => ct.LanguageCode).IsRequired().HasMaxLength(5);
+        builder.Property(ct => ct.Name).IsRequired().HasMaxLength(100);
+        builder.HasIndex(ct => new { ct.CategoryId, ct.LanguageCode }).IsUnique();
+
+        builder.HasOne(ct => ct.Category)
+            .WithMany(c => c.Translations)
+            .HasForeignKey(ct => ct.CategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class OccasionConfiguration : IEntityTypeConfiguration<Occasion>
 {
     public void Configure(EntityTypeBuilder<Occasion> builder)
@@ -128,6 +144,22 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
         builder.HasOne(pv => pv.Product)
             .WithMany(p => p.Variants)
             .HasForeignKey(pv => pv.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ProductTranslationConfiguration : IEntityTypeConfiguration<ProductTranslation>
+{
+    public void Configure(EntityTypeBuilder<ProductTranslation> builder)
+    {
+        builder.HasKey(pt => pt.Id);
+        builder.Property(pt => pt.LanguageCode).IsRequired().HasMaxLength(5);
+        builder.Property(pt => pt.Name).IsRequired().HasMaxLength(200);
+        builder.HasIndex(pt => new { pt.ProductId, pt.LanguageCode }).IsUnique();
+
+        builder.HasOne(pt => pt.Product)
+            .WithMany(p => p.Translations)
+            .HasForeignKey(pt => pt.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

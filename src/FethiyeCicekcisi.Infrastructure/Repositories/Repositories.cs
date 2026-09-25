@@ -25,6 +25,7 @@ public class ProductRepository : Repository<Product>, IProductRepository
     public async Task<IEnumerable<Product>> GetFeaturedAsync(int count = 8) =>
         await _dbSet.Include(p => p.Category)
                     .Include(p => p.Images)
+                    .Include(p => p.Translations)
                     .Where(p => p.IsFeatured && p.Status == Core.Enums.ProductStatus.Active)
                     .OrderBy(p => p.DisplayOrder)
                     .Take(count)
@@ -40,6 +41,7 @@ public class ProductRepository : Repository<Product>, IProductRepository
     {
         var query = _dbSet.Include(p => p.Category).Include(p => p.Images)
             .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
+            .Include(p => p.Translations)
             .AsQueryable();
 
         if (categoryId.HasValue)
@@ -96,10 +98,11 @@ public class ProductRepository : Repository<Product>, IProductRepository
                     .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task<Product?> GetWithImagesAndVariantsBySlugAsync(string slug) =>
-        await _dbSet.Include(p => p.Category)
+        await _dbSet.Include(p => p.Category).ThenInclude(c => c.Translations)
                     .Include(p => p.Images.OrderBy(i => i.DisplayOrder))
                     .Include(p => p.Variants.Where(v => v.IsActive && !v.IsDeleted))
                     .Include(p => p.ProductOccasions).ThenInclude(po => po.Occasion)
+                    .Include(p => p.Translations)
                     .FirstOrDefaultAsync(p => p.Slug == slug);
 
     /// <summary>Admin editing needs to see inactive-but-not-deleted variants too (so they can
@@ -109,6 +112,7 @@ public class ProductRepository : Repository<Product>, IProductRepository
                     .Include(p => p.Images.OrderBy(i => i.DisplayOrder))
                     .Include(p => p.Variants.Where(v => !v.IsDeleted))
                     .Include(p => p.ProductOccasions)
+                    .Include(p => p.Translations)
                     .FirstOrDefaultAsync(p => p.Id == id);
 
     public async Task<ProductImage?> GetImageByIdAsync(int imageId) =>
@@ -130,16 +134,20 @@ public class CategoryRepository : Repository<Category>, ICategoryRepository
     public CategoryRepository(AppDbContext context) : base(context) { }
 
     public async Task<Category?> GetBySlugAsync(string slug) =>
-        await _dbSet.Include(c => c.Products).FirstOrDefaultAsync(c => c.Slug == slug);
+        await _dbSet.Include(c => c.Products).Include(c => c.Translations).FirstOrDefaultAsync(c => c.Slug == slug);
 
     public async Task<IEnumerable<Category>> GetActiveAsync() =>
-        await _dbSet.Where(c => c.IsActive && !c.IsDeleted)
+        await _dbSet.Include(c => c.Translations)
+                    .Where(c => c.IsActive && !c.IsDeleted)
                     .OrderBy(c => c.DisplayOrder)
                     .ToListAsync();
 
     public async Task<Category?> GetWithProductsAsync(int id) =>
         await _dbSet.Include(c => c.Products).ThenInclude(p => p.Images)
                     .FirstOrDefaultAsync(c => c.Id == id);
+
+    public async Task<Category?> GetByIdWithTranslationsAsync(int id) =>
+        await _dbSet.Include(c => c.Translations).FirstOrDefaultAsync(c => c.Id == id);
 }
 
 public class OccasionRepository : Repository<Occasion>, IOccasionRepository
