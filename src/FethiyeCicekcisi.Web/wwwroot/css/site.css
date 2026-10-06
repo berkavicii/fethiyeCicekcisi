@@ -112,11 +112,13 @@ main{animation:pageEnter .6s var(--ease) both}
 .dropdown-menu-minimal .dropdown-divider{border-color:var(--kw-hairline)}
 
 /* Mobile off-canvas menu */
-.offcanvas-kw{width:min(340px,85vw);background:var(--kw-cream)}
+.offcanvas-kw{width:min(340px,85vw);background:var(--kw-cream);overflow-y:auto}
 .offcanvas-kw .offcanvas-header{border-bottom:1px solid var(--kw-hairline);padding:1.25rem 1.5rem}
 .offcanvas-kw .offcanvas-body{padding:1.5rem}
-.offcanvas-kw .nav-link{display:block;font-family:var(--font-display);font-size:1.15rem;text-transform:none;letter-spacing:0;font-weight:450;padding:.8rem 0!important;border-bottom:1px solid var(--kw-hairline)}
+.offcanvas-kw .nav-link{display:block;font-family:var(--font-display);font-size:1.05rem;text-transform:none;letter-spacing:0;font-weight:450;padding:.65rem 0!important;border-bottom:1px solid var(--kw-hairline)}
 .offcanvas-kw .nav-link::after{display:none}
+.offcanvas-kw .nav-link-primary{font-size:1.3rem;font-weight:500;border-bottom-color:var(--kw-ink)}
+.offcanvas-kw .mobile-menu-tag{margin:1.5rem 0 .5rem}
 
 /* ---------- Hero ---------- */
 .hero-section{position:relative;min-height:92vh;display:flex;align-items:center;overflow:hidden;color:var(--kw-white);background:var(--kw-ink)}

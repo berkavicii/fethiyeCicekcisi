@@ -74,46 +74,29 @@
             <p class="section-tag">@L["Koleksiyon"]</p>
             <h2 class="section-title">@Html.Raw(L["Atölyeden <em>seçmeler</em>"])</h2>
         </div>
+        @{
+            var showcaseCategories = (ViewBag.Categories as IEnumerable<FethiyeCicekcisi.Core.Entities.Category>
+                ?? Enumerable.Empty<FethiyeCicekcisi.Core.Entities.Category>())
+                .OrderBy(c => c.DisplayOrder).Take(3).ToList();
+        }
         <div class="row g-4 g-lg-5">
-            <div class="col-md-4 reveal">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="buketler" class="collection-card">
-                    <div class="collection-card-media collection-card-arch">
-                        <img src="https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&q=80"
-                             alt="Buketler" loading="lazy" />
-                    </div>
-                    <div class="collection-card-caption">
-                        <span class="collection-index">01</span>
-                        <h3>@L["Buketler"]</h3>
-                        <i class="bi bi-arrow-right"></i>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-4 reveal" style="transition-delay:.1s">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="orkideler" class="collection-card">
-                    <div class="collection-card-media collection-card-arch">
-                        <img src="https://images.unsplash.com/photo-1524598171347-abf62dfd6694?w=800&q=80"
-                             alt="Orkideler" loading="lazy" />
-                    </div>
-                    <div class="collection-card-caption">
-                        <span class="collection-index">02</span>
-                        <h3>@L["Orkideler"]</h3>
-                        <i class="bi bi-arrow-right"></i>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-4 reveal" style="transition-delay:.2s">
-                <a asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar" class="collection-card">
-                    <div class="collection-card-media collection-card-arch">
-                        <img src="https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=800&q=80"
-                             alt="Aranjmanlar" loading="lazy" />
-                    </div>
-                    <div class="collection-card-caption">
-                        <span class="collection-index">03</span>
-                        <h3>@L["Aranjmanlar"]</h3>
-                        <i class="bi bi-arrow-right"></i>
-                    </div>
-                </a>
-            </div>
+            @for (var i = 0; i < showcaseCategories.Count; i++)
+            {
+                var cat = showcaseCategories[i];
+                <div class="col-md-4 reveal" style="transition-delay:@(i * .1)s">
+                    <a asp-controller="Product" asp-action="Category" asp-route-slug="@cat.Slug" class="collection-card">
+                        <div class="collection-card-media collection-card-arch">
+                            <img src="@(string.IsNullOrEmpty(cat.ImageUrl) ? "/images/products/placeholder.jpg" : cat.ImageUrl)"
+                                 alt="@cat.GetLocalizedName()" loading="lazy" />
+                        </div>
+                        <div class="collection-card-caption">
+                            <span class="collection-index">@((i + 1).ToString("D2"))</span>
+                            <h3>@cat.GetLocalizedName()</h3>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+            }
         </div>
     </div>
 </section>

@@ -244,16 +244,20 @@
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Kapat"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
+            <a class="nav-link nav-link-primary" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
+
+            <p class="section-tag mobile-menu-tag">@L["Koleksiyon"]</p>
             @foreach (var navCat in navCategories)
             {
                 <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a>
             }
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a>
+
+            <p class="section-tag mobile-menu-tag">@L["Kurumsal"]</p>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
 
-            <div class="mt-3">
+            <div class="mt-auto pt-4">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>@L["Profilim"]</a>
