@@ -1,8 +1,13 @@
 @using System.Text.Json
 @using Microsoft.Extensions.Localization
+@using FethiyeCicekcisi.Core.Interfaces.Repositories
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject IStringLocalizer<SharedResource> L
+@inject ICategoryRepository CategoryRepo
 @{
+    // Navbar/footer kategori listesi DB'den gelir — admin panelinden yeni kategori eklenince
+    // burada da otomatik görünür, sayfaya özel hiçbir kod değişikliği gerekmez.
+    var navCategories = (await CategoryRepo.GetActiveAsync()).OrderBy(c => c.DisplayOrder).ToList();
     var supportedLanguages = new[]
     {
         (Code: "tr", Flag: "🇹🇷", Label: "Türkçe"),
@@ -123,13 +128,10 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">@L["Çiçekler"]</a>
                     <ul class="dropdown-menu dropdown-menu-minimal">
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="saksi-cicekleri">Saksı Çiçekleri</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="teraryumlar">Teraryumlar</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a></li>
-                        <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="yapay-cicekler">Yapay Çiçekler</a></li>
+                        @foreach (var navCat in navCategories)
+                        {
+                            <li><a class="dropdown-item" asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a></li>
+                        }
                         <li><hr class="dropdown-divider" /></li>
                         <li><a class="dropdown-item" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a></li>
                     </ul>
@@ -243,12 +245,10 @@
         </div>
         <div class="offcanvas-body d-flex flex-column">
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="saksi-cicekleri">Saksı Çiçekleri</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="teraryumlar">Teraryumlar</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a>
+            @foreach (var navCat in navCategories)
+            {
+                <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a>
+            }
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
             <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
@@ -357,10 +357,10 @@
                 <div class="col-6 col-md-2">
                     <h6 class="footer-heading">@L["Çiçekler"]</h6>
                     <ul class="footer-links">
-                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="buketler">@L["Buketler"]</a></li>
-                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="orkideler">Orkideler</a></li>
-                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="aranjmanlar">Aranjmanlar</a></li>
-                        <li><a asp-controller="Product" asp-action="Category" asp-route-slug="celenkler">Çelenkler</a></li>
+                        @foreach (var navCat in navCategories.Take(4))
+                        {
+                            <li><a asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a></li>
+                        }
                         <li><a asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a></li>
                     </ul>
                 </div>
