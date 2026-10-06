@@ -243,28 +243,37 @@
             <img src="/images/logo.png" alt="Yonca Çiçekçilik" class="brand-logo" style="height:40px" id="mobileMenuLabel" />
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Kapat"></button>
         </div>
+        @* NOT: Bu menüdeki linklere data-bs-dismiss="offcanvas" KOYMAYIN — Bootstrap, <a>
+           üzerindeki dismiss tıklamasında preventDefault() çağırıp yönlendirmeyi iptal ediyor.
+           Sayfa zaten yeni yüklendiği için menüyü kapatmaya gerek yok. *@
         <div class="offcanvas-body d-flex flex-column">
-            <a class="nav-link nav-link-primary" data-bs-dismiss="offcanvas" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
+            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">@L["Ana Sayfa"]</a>
 
-            <p class="section-tag mobile-menu-tag">@L["Koleksiyon"]</p>
-            @foreach (var navCat in navCategories)
-            {
-                <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a>
-            }
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a>
+            <button class="nav-link mobile-collapse-toggle collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#mobileCollections" aria-expanded="false" aria-controls="mobileCollections">
+                @L["Koleksiyon"] <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="collapse" id="mobileCollections">
+                <div class="mobile-submenu">
+                    @foreach (var navCat in navCategories)
+                    {
+                        <a class="nav-link" asp-controller="Product" asp-action="Category" asp-route-slug="@navCat.Slug">@navCat.GetLocalizedName()</a>
+                    }
+                    <a class="nav-link" asp-controller="Product" asp-action="Index">@L["Tüm Çiçekler"]</a>
+                </div>
+            </div>
 
-            <p class="section-tag mobile-menu-tag">@L["Kurumsal"]</p>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
-            <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
+            <a class="nav-link" asp-controller="Home" asp-action="About">@L["Hakkımızda"]</a>
+            <a class="nav-link" asp-controller="Home" asp-action="Contact">@L["İletişim"]</a>
 
             <div class="mt-auto pt-4">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>@L["Profilim"]</a>
-                    <a class="nav-link" data-bs-dismiss="offcanvas" asp-controller="Order" asp-action="MyOrders"><i class="bi bi-bag-check me-2"></i>@L["Siparişlerim"]</a>
+                    <a class="nav-link" asp-controller="Account" asp-action="Profile"><i class="bi bi-person me-2"></i>@L["Profilim"]</a>
+                    <a class="nav-link" asp-controller="Order" asp-action="MyOrders"><i class="bi bi-bag-check me-2"></i>@L["Siparişlerim"]</a>
                     @if (User.IsInRole("Admin"))
                     {
-                        <a class="nav-link" data-bs-dismiss="offcanvas" href="/admin"><i class="bi bi-speedometer2 me-2"></i>@L["Admin Panel"]</a>
+                        <a class="nav-link" href="/admin"><i class="bi bi-speedometer2 me-2"></i>@L["Admin Panel"]</a>
                     }
                     <form asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
                         @Html.AntiForgeryToken()
@@ -273,7 +282,7 @@
                 }
                 else
                 {
-                    <a asp-controller="Account" asp-action="Login" class="btn-kw-dark w-100 mt-2" data-bs-dismiss="offcanvas">@L["Giriş Yap"]</a>
+                    <a asp-controller="Account" asp-action="Login" class="btn-kw-dark w-100 mt-2">@L["Giriş Yap"]</a>
                 }
             </div>
         </div>

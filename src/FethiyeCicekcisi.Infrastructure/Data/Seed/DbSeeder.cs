@@ -38,7 +38,7 @@ public static class DbSeeder
             await SeedCategoriesAsync(context);
             await SeedOccasionsAsync(context);
             await SeedDeliveryZonesAsync(context);
-            await SeedDemoProductsAsync(context);
+            await SeedDemoProductsAsync(context, scope.ServiceProvider.GetRequiredService<IHostEnvironment>());
             await SeedRealProductsFromFolderAsync(scope.ServiceProvider, context, logger);
             await BackfillProductCodesAsync(context);
             logger.LogInformation("Seed data başarıyla yüklendi.");
@@ -475,9 +475,12 @@ public static class DbSeeder
 
     /// <summary>Vitrin boş açılmasın diye Unsplash görselli örnek çiçek ürünleri — yalnızca
     /// hiç ürün yokken (ilk kurulum) çalışır; admin kendi katalogunu girdikten sonra bu
-    /// listeye bir daha dokunulmaz.</summary>
-    private static async Task SeedDemoProductsAsync(AppDbContext context)
+    /// listeye bir daha dokunulmaz. Production'da HİÇ çalışmaz: canlı mağazaya satılmayan
+    /// sahte ürünler ve stok fotoğrafları girmesi, gerçek ürünlerin görsellerini bastırmasına
+    /// ve müşteriye yanlış katalog gösterilmesine yol açıyordu.</summary>
+    private static async Task SeedDemoProductsAsync(AppDbContext context, IHostEnvironment env)
     {
+        if (!env.IsDevelopment()) return;
         if (await context.Products.IgnoreQueryFilters().AnyAsync()) return;
 
         var categories = await context.Categories.ToDictionaryAsync(c => c.Slug);

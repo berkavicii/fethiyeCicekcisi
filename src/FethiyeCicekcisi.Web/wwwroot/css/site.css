@@ -117,8 +117,11 @@ main{animation:pageEnter .6s var(--ease) both}
 .offcanvas-kw .offcanvas-body{padding:1.5rem}
 .offcanvas-kw .nav-link{display:block;font-family:var(--font-display);font-size:1.05rem;text-transform:none;letter-spacing:0;font-weight:450;padding:.65rem 0!important;border-bottom:1px solid var(--kw-hairline)}
 .offcanvas-kw .nav-link::after{display:none}
-.offcanvas-kw .nav-link-primary{font-size:1.3rem;font-weight:500;border-bottom-color:var(--kw-ink)}
-.offcanvas-kw .mobile-menu-tag{margin:1.5rem 0 .5rem}
+.offcanvas-kw .mobile-collapse-toggle{width:100%;background:transparent;border:0;border-bottom:1px solid var(--kw-hairline);text-align:left;display:flex;align-items:center;justify-content:space-between;color:var(--kw-ink)}
+.offcanvas-kw .mobile-collapse-toggle .bi{font-size:.85rem;transition:transform var(--transition)}
+.offcanvas-kw .mobile-collapse-toggle:not(.collapsed) .bi{transform:rotate(180deg)}
+.offcanvas-kw .mobile-submenu{padding-left:1rem;border-bottom:1px solid var(--kw-hairline)}
+.offcanvas-kw .mobile-submenu .nav-link{font-size:1.02rem;padding:.65rem 0!important;border-bottom:0}
 
 /* ---------- Hero ---------- */
 .hero-section{position:relative;min-height:92vh;display:flex;align-items:center;overflow:hidden;color:var(--kw-white);background:var(--kw-ink)}
